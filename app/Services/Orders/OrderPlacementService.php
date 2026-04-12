@@ -20,11 +20,11 @@ class OrderPlacementService
         $product = Product::findOrFail($validated['product_id']);
 
         if ($product->user_id === $buyer->id) {
-            return $this->failure('لا يمكنك شراء منتجك الخاص.');
+            return $this->failure('لا يمكنك شراء منتجك الخاص.', 'ORDER_SELF_PURCHASE_NOT_ALLOWED');
         }
 
         if ($product->status !== 'available') {
-            return $this->failure('هذا المنتج لم يعد متوفراً.');
+            return $this->failure('هذا المنتج لم يعد متوفراً.', 'ORDER_PRODUCT_NOT_AVAILABLE');
         }
 
         if ($product->source === 'user') {
@@ -34,12 +34,15 @@ class OrderPlacementService
                 ->first();
 
             if ($existing) {
-                return $this->failure('لديك طلب معلق مسبقاً لهذا المنتج.');
+                return $this->failure('لديك طلب معلق مسبقاً لهذا المنتج.', 'ORDER_PENDING_DUPLICATE');
             }
         }
 
         if ($validated['payment_method'] === 'wallet' && $buyer->wallet_balance < $product->price) {
-            return $this->failure('رصيد المحفظة غير كافي. يرجى شحن الرصيد أو اختيار طريقة دفع أخرى.');
+            return $this->failure(
+                'رصيد المحفظة غير كافي. يرجى شحن الرصيد أو اختيار طريقة دفع أخرى.',
+                'ORDER_WALLET_BALANCE_INSUFFICIENT'
+            );
         }
 
         $order = new Order();
@@ -60,7 +63,7 @@ class OrderPlacementService
                 $variant = ProductVariant::find($validated['color']);
 
                 if ($variant && $variant->stock_quantity <= 0) {
-                    return $this->failure('اللون المختار غير متوفر حالياً.');
+                    return $this->failure('اللون المختار غير متوفر حالياً.', 'ORDER_VARIANT_OUT_OF_STOCK');
                 }
             }
         } else {
@@ -88,11 +91,12 @@ class OrderPlacementService
         ];
     }
 
-    private function failure(string $message): array
+    private function failure(string $message, string $code): array
     {
         return [
             'success' => false,
             'message' => $message,
+            'code' => $code,
         ];
     }
 }

@@ -21,14 +21,17 @@ class OrderWorkflowService
     {
         if ($action === 'approve') {
             if (! $order->admin_approval) {
-                return $this->failure('يجب انتظار موافقة الإدارة أولاً.');
+                return $this->failure('يجب انتظار موافقة الإدارة أولاً.', 'ORDER_ADMIN_APPROVAL_REQUIRED');
             }
 
             if ($order->payment_method === 'wallet') {
                 $buyer = $order->user;
 
                 if ($buyer->wallet_balance < $order->total_price) {
-                    return $this->failure('رصيد المشتري غير كافي حالياً. لا يمكن إتمام البيع.');
+                    return $this->failure(
+                        'رصيد المشتري غير كافي حالياً. لا يمكن إتمام البيع.',
+                        'ORDER_BUYER_BALANCE_INSUFFICIENT'
+                    );
                 }
 
                 try {
@@ -45,7 +48,10 @@ class OrderWorkflowService
 
                     $this->notifications->notifyBuyerSellerApprovedWithWallet($buyer, $order);
                 } catch (Exception $e) {
-                    return $this->failure('حدث خطأ أثناء معالجة العملية: ' . $e->getMessage());
+                    return $this->failure(
+                        'حدث خطأ أثناء معالجة العملية: '.$e->getMessage(),
+                        'ORDER_WORKFLOW_FAILED'
+                    );
                 }
             } else {
                 $order->seller_approval = true;
@@ -80,7 +86,7 @@ class OrderWorkflowService
         if ($action === 'approve') {
             if ($order->variant) {
                 if ($order->variant->stock_quantity <= 0) {
-                    return $this->failure('اللون المختار نفد من المخزون!');
+                    return $this->failure('اللون المختار نفد من المخزون!', 'ORDER_VARIANT_OUT_OF_STOCK');
                 }
 
                 $order->variant->decrement('stock_quantity');
@@ -88,13 +94,19 @@ class OrderWorkflowService
 
             if ($order->payment_method === 'wallet') {
                 if ($order->user->wallet_balance < $order->total_price) {
-                    return $this->failure('رصيد المشتري غير كافي لإتمام العملية.');
+                    return $this->failure(
+                        'رصيد المشتري غير كافي لإتمام العملية.',
+                        'ORDER_BUYER_BALANCE_INSUFFICIENT'
+                    );
                 }
 
                 try {
                     $this->walletLedger->withdrawForInventoryPurchase($order->user, $order);
                 } catch (Exception $e) {
-                    return $this->failure('حدث خطأ أثناء خصم المبلغ: ' . $e->getMessage());
+                    return $this->failure(
+                        'حدث خطأ أثناء خصم المبلغ: '.$e->getMessage(),
+                        'ORDER_WALLET_DEBIT_FAILED'
+                    );
                 }
             }
 
@@ -146,11 +158,12 @@ class OrderWorkflowService
         return ['success' => true];
     }
 
-    private function failure(string $message): array
+    private function failure(string $message, string $code): array
     {
         return [
             'success' => false,
             'message' => $message,
+            'code' => $code,
         ];
     }
 }

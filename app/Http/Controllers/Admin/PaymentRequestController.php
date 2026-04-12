@@ -4,49 +4,35 @@ namespace App\Http\Controllers\Admin;
 
 use App\Http\Controllers\Controller;
 use App\Models\PaymentRequest;
+use App\Services\Wallet\RechargeRequestService;
+use App\Services\Wallet\WalletQueryService;
 use Illuminate\Http\Request;
 
 class PaymentRequestController extends Controller
 {
+    public function __construct(
+        private WalletQueryService $walletQueryService,
+        private RechargeRequestService $rechargeRequestService,
+    ) {
+    }
+
     public function index()
     {
-        $requests = PaymentRequest::with('user')->latest()->paginate(20);
+        $requests = $this->walletQueryService->getAdminRechargeRequests();
+
         return view('admin.payment_requests.index', compact('requests'));
     }
 
     public function update(Request $request, PaymentRequest $paymentRequest)
     {
-        $request->validate(['status' => 'required|in:pending,approved,rejected']);
+        $validated = $request->validate([
+            'status' => 'required|in:pending,approved,rejected',
+        ]);
 
-        if ($paymentRequest->status !== 'pending') {
-            return back()->with('error', 'Request already processed.');
-        }
+        $result = $this->rechargeRequestService->processRechargeRequest($paymentRequest, $validated['status']);
 
-        if ($request->status === 'approved') {
-            $paymentRequest->update(['status' => 'approved']);
-            
-            // Credit User Wallet
-            $paymentRequest->user->deposit(
-                $paymentRequest->amount, 
-                'deposit', 
-                "Wallet Recharge (Ref: {$paymentRequest->id})"
-            );
-
-            \App\Services\NotificationService::send(
-                $paymentRequest->user_id, 
-                'تم قبول الشحن', 
-                "تم شحن محفظتك بمبلغ \${$paymentRequest->amount} بنجاح.", 
-                'wallet'
-            );
-        } else {
-            $paymentRequest->update(['status' => 'rejected']);
-            
-            \App\Services\NotificationService::send(
-                $paymentRequest->user_id, 
-                'تم رفض الشحن', 
-                "عذراً، تم رفض طلب شحن المحفظة الخاص بك. يرجى التحقق من البيانات.", 
-                'wallet'
-            );
+        if (! $result['success']) {
+            return back()->with('error', $result['message']);
         }
 
         return back()->with('success', 'Request status updated.');

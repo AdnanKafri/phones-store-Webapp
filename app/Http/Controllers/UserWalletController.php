@@ -2,39 +2,40 @@
 
 namespace App\Http\Controllers;
 
-use App\Models\WalletTransaction;
-use App\Services\NotificationService;
+use App\Services\Wallet\RechargeRequestService;
+use App\Services\Wallet\WalletQueryService;
 use Illuminate\Http\Request;
 use Illuminate\Support\Facades\Auth;
 
 class UserWalletController extends Controller
 {
+    public function __construct(
+        private WalletQueryService $walletQueryService,
+        private RechargeRequestService $rechargeRequestService,
+    ) {
+    }
+
     public function index()
     {
         $user = Auth::user();
-        $transactions = $user->walletTransactions()->latest()->paginate(10);
+        $transactions = $this->walletQueryService->getUserTransactions($user->id);
+
         return view('dashboard.wallet.index', compact('user', 'transactions'));
     }
 
     public function recharge(Request $request)
     {
-        $request->validate([
+        $validated = $request->validate([
             'amount' => 'required|numeric|min:1',
             'method' => 'required|in:syriatel_cash,mtn_cash,stripe',
-            'proof' => 'nullable|image|mimes:jpeg,png,jpg|max:2048'
+            'proof' => 'nullable|image|mimes:jpeg,png,jpg|max:2048',
         ]);
 
-        // Create Payment Request for ALL methods (Manual Approval Required)
-        \App\Models\PaymentRequest::create([
-            'user_id' => Auth::id(),
-            'amount' => $request->amount,
-            'type' => 'deposit',
-            'status' => 'pending',
-            'payment_method' => $request->method,
-            'proof_image' => $request->hasFile('proof') ? $request->file('proof')->store('payment_proofs', 'public') : null,
-        ]);
-
-        NotificationService::broadcastToAdmins('New Recharge Request', "User " . Auth::user()->name . " requested recharge of \${$request->amount}.", 'wallet');
+        $this->rechargeRequestService->createRechargeRequest(
+            $validated,
+            Auth::user(),
+            $request->hasFile('proof')
+        );
 
         return back()->with('success', 'تم إرسال طلب الشحن بنجاح وهو قيد المراجعة.');
     }
