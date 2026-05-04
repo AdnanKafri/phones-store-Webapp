@@ -22,6 +22,10 @@ class ProductQueryService
             $query->where('status', '!=', 'pending');
         }
 
+        if (! empty($filters['category_id'])) {
+            $query->where('category_id', $filters['category_id']);
+        }
+
         return $query->latest()->paginate($perPage);
     }
 

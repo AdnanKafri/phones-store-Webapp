@@ -32,4 +32,11 @@ class ProfileController extends ApiController
             'Profile updated successfully.'
         );
     }
+
+    public function destroy(Request $request)
+    {
+        $this->profileService->deleteAccount($request->user());
+
+        return $this->successResponse(null, 'Account deleted successfully.');
+    }
 }

@@ -18,7 +18,7 @@ class ProductController extends ApiController
 
     public function index(Request $request)
     {
-        $products = $this->productQueryService->getApiPublicProducts($request->only(['source', 'status']));
+        $products = $this->productQueryService->getApiPublicProducts($request->only(['source', 'status', 'category_id']));
 
         return $this->resourceResponse(
             new ProductCollection($products),
