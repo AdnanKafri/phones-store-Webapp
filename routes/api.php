@@ -1,6 +1,7 @@
 <?php
 
 use App\Http\Controllers\Api\V1\Auth\AuthController;
+use App\Http\Controllers\Api\V1\Ai\AiAdvisorController;
 use App\Http\Controllers\Api\V1\Catalog\CategoryController as ApiCategoryController;
 use App\Http\Controllers\Api\V1\Catalog\ProductController as ApiProductController;
 use App\Http\Controllers\Api\V1\Listings\ListingController;
@@ -29,6 +30,7 @@ Route::get('search', [GeneralController::class, 'search'])->name('api.v1.search'
 Route::get('products', [ApiProductController::class, 'index'])->name('api.v1.products.index');
 Route::get('products/{product}', [ApiProductController::class, 'show'])->name('api.v1.products.show');
 Route::get('categories', [ApiCategoryController::class, 'index'])->name('api.v1.categories.index');
+Route::post('ai/advisor', AiAdvisorController::class)->name('api.v1.ai.advisor');
 
 Route::middleware('auth:sanctum')->group(function () {
     Route::get('me', [ApiProfileController::class, 'show'])->name('api.v1.me.show');

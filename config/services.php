@@ -35,4 +35,12 @@ return [
         ],
     ],
 
+    'gemini' => [
+        'api_key' => env('GEMINI_API_KEY'),
+        'endpoint' => env(
+            'GEMINI_ENDPOINT',
+            'https://generativelanguage.googleapis.com/v1beta/models/gemini-flash-latest:generateContent'
+        ),
+    ],
+
 ];
