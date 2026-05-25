@@ -6,13 +6,18 @@ use App\Http\Controllers\Api\ApiController;
 use App\Http\Resources\CategoryResource;
 use App\Http\Resources\DeviceRequestResource;
 use App\Http\Resources\ProductResource;
-use App\Models\Category;
 use App\Models\DeviceRequest;
 use App\Models\Product;
+use App\Services\Catalog\CategoryQueryService;
 use Illuminate\Http\Request;
 
 class GeneralController extends ApiController
 {
+    public function __construct(
+        private CategoryQueryService $categoryQueryService,
+    ) {
+    }
+
     public function home()
     {
         $products = Product::whereIn('status', ['available', 'sold'])
@@ -27,9 +32,7 @@ class GeneralController extends ApiController
             ->take(10)
             ->get();
 
-        $categories = Category::withCount('products')
-            ->orderBy('name')
-            ->get();
+        $categories = $this->categoryQueryService->getApiCategories();
 
         return $this->successResponse([
             'categories' => CategoryResource::collection($categories),
