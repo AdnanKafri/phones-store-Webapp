@@ -4,10 +4,28 @@ namespace App\Http\Controllers\Api\V1\Auth;
 
 use App\Http\Controllers\Api\ApiController;
 use App\Http\Requests\Api\V1\Auth\LoginRequest;
+use App\Http\Requests\Api\V1\Auth\RegisterRequest;
+use App\Services\Auth\RegisterService;
 use Illuminate\Http\Request;
 
 class AuthController extends ApiController
 {
+    public function __construct(
+        private RegisterService $registerService,
+    ) {
+    }
+
+    public function register(RegisterRequest $request)
+    {
+        $result = $this->registerService->register($request->validated());
+
+        return $this->successResponse([
+            'token' => $result['token'],
+            'token_type' => 'Bearer',
+            'user' => $this->userPayload($result['user']),
+        ], 'Registered successfully.');
+    }
+
     public function login(LoginRequest $request)
     {
         $user = $request->authenticateForApi();

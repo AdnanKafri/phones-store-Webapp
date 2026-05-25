@@ -1,4 +1,4 @@
-# FINAL API DOCUMENTATION V2
+﻿# FINAL API DOCUMENTATION V2
 
 This document provides a highly structured, enterprise-grade specification for the REST API (`v1`). 
 It serves as the definitive implementation contract for mobile (Flutter) developers.
@@ -32,22 +32,102 @@ When paginated, endpoints return a `meta` block:
 
 ---
 
-## 🔐 Auth
+## ðŸ” Auth
 
-### 🔹 Endpoint: User Login
+### ðŸ”¹ Endpoint: Register User
+
+**Method:** POST  
+**URI:** `/api/v1/auth/register`  
+**Authentication:** Not Required
+
+---
+### ðŸ§¾ Headers
+| Key           | Value            | Required |
+| ------------- | ---------------- | -------- |
+| Accept        | application/json | Yes      |
+
+---
+### ðŸ“¥ Request Body
+* **Content-Type:** `application/json`
+
+| Field                 | Type   | Required | Description |
+| --------------------- | ------ | -------- | ----------- |
+| name                  | string | Yes      | User full name |
+| email                 | string | Yes      | Unique user email |
+| phone                 | string | No       | User phone number |
+| password              | string | Yes      | Password with minimum 8 characters |
+| password_confirmation | string | Yes      | Must match `password` |
+
+#### Example Request
+```json
+{
+  "name": "Ahmed",
+  "email": "ahmed@example.com",
+  "phone": "0999999999",
+  "password": "password123",
+  "password_confirmation": "password123"
+}
+```
+
+---
+### ðŸ“¤ Success Response
+```json
+{
+  "data": {
+    "token": "1|abc123token",
+    "token_type": "Bearer",
+    "user": {
+      "id": 5,
+      "name": "Ahmed",
+      "email": "ahmed@example.com",
+      "username": null,
+      "phone": "0999999999",
+      "role": "user",
+      "wallet_balance": 0,
+      "location": null
+    }
+  },
+  "message": "Registered successfully."
+}
+```
+**Explanation:** Creates the account, hashes the password, and immediately returns a Sanctum bearer token for mobile use.
+
+---
+### âŒ Validation Error Response
+```json
+{
+  "message": "The given data was invalid.",
+  "code": "VALIDATION_ERROR",
+  "errors": {
+    "email": [
+      "The email has already been taken."
+    ],
+    "password": [
+      "The password must be at least 8 characters."
+    ]
+  }
+}
+```
+
+---
+### ðŸ“ Notes
+* **Mobile Tip:** Use the returned `token` immediately for authenticated requests. No redirect or session cookie is required.
+
+---
+### ðŸ”¹ Endpoint: User Login
 
 **Method:** POST  
 **URI:** `/api/v1/auth/login`  
 **Authentication:** Not Required
 
 ---
-### 🧾 Headers
+### ðŸ§¾ Headers
 | Key           | Value            | Required |
 | ------------- | ---------------- | -------- |
 | Accept        | application/json | Yes      |
 
 ---
-### 📥 Request Body
+### ðŸ“¥ Request Body
 * **Content-Type:** `application/json`
 
 | Field       | Type   | Required | Description |
@@ -57,7 +137,7 @@ When paginated, endpoints return a `meta` block:
 | device_name | string | Yes      | Identifier for the device (e.g., 'flutter-ios') |
 
 ---
-### 📤 Success Response
+### ðŸ“¤ Success Response
 ```json
 {
   "data": {
@@ -80,7 +160,7 @@ When paginated, endpoints return a `meta` block:
 **Explanation:** Returns the Sanctum auth token and basic user details. Store `token` securely on the device.
 
 ---
-### ❌ Error Response
+### âŒ Error Response
 ```json
 {
   "message": "The given data was invalid.",
@@ -92,30 +172,30 @@ When paginated, endpoints return a `meta` block:
 ```
 
 ---
-### 📝 Notes
+### ðŸ“ Notes
 * **Mobile Tip:** Store the token using `flutter_secure_storage`. Inject it into all future requests using Dio interceptors or http middleware.
 
 ---
 
-### 🔹 Endpoint: Current Auth User
+### ðŸ”¹ Endpoint: Current Auth User
 
 **Method:** GET  
 **URI:** `/api/v1/auth/me`  
 **Authentication:** Required
 
 ---
-### 🧾 Headers
+### ðŸ§¾ Headers
 | Key           | Value            | Required |
 | ------------- | ---------------- | -------- |
 | Authorization | Bearer {token}   | Yes      |
 | Accept        | application/json | Yes      |
 
 ---
-### 📥 Request Body
+### ðŸ“¥ Request Body
 *(None)*
 
 ---
-### 📤 Success Response
+### ðŸ“¤ Success Response
 ```json
 {
   "data": {
@@ -136,7 +216,7 @@ When paginated, endpoints return a `meta` block:
 **Explanation:** Returns compact user data. Used on app startup to re-validate token viability.
 
 ---
-### ❌ Error Response
+### âŒ Error Response
 ```json
 {
   "message": "Unauthenticated.",
@@ -146,25 +226,25 @@ When paginated, endpoints return a `meta` block:
 
 ---
 
-### 🔹 Endpoint: User Logout
+### ðŸ”¹ Endpoint: User Logout
 
 **Method:** POST  
 **URI:** `/api/v1/auth/logout`  
 **Authentication:** Required
 
 ---
-### 🧾 Headers
+### ðŸ§¾ Headers
 | Key           | Value            | Required |
 | ------------- | ---------------- | -------- |
 | Authorization | Bearer {token}   | Yes      |
 | Accept        | application/json | Yes      |
 
 ---
-### 📥 Request Body
+### ðŸ“¥ Request Body
 *(None)*
 
 ---
-### 📤 Success Response
+### ðŸ“¤ Success Response
 ```json
 {
   "data": null,
@@ -173,35 +253,35 @@ When paginated, endpoints return a `meta` block:
 ```
 
 ---
-### ❌ Error Response
+### âŒ Error Response
 *(Standard 401 Unauthenticated)*
 
 ---
-### 📝 Notes
+### ðŸ“ Notes
 * **Mobile Tip:** Call this, then immediately clear the token from device secure storage.
 
 ---
 
-## 🏠 Home
+## ðŸ  Home
 
-### 🔹 Endpoint: Home Feed
+### ðŸ”¹ Endpoint: Home Feed
 
 **Method:** GET  
 **URI:** `/api/v1/home`  
 **Authentication:** Not Required
 
 ---
-### 🧾 Headers
+### ðŸ§¾ Headers
 | Key           | Value            | Required |
 | ------------- | ---------------- | -------- |
 | Accept        | application/json | Yes      |
 
 ---
-### 📥 Request Body
+### ðŸ“¥ Request Body
 *(None)*
 
 ---
-### 📤 Success Response
+### ðŸ“¤ Success Response
 ```json
 {
   "data": {
@@ -250,27 +330,27 @@ When paginated, endpoints return a `meta` block:
 - `device_requests`: array of the 10 latest approved user requests.
 
 ---
-### ❌ Error Response
+### âŒ Error Response
 *(Standard Server Error)*
 
 ---
 
-## 🔎 Search
+## ðŸ”Ž Search
 
-### 🔹 Endpoint: Global Search
+### ðŸ”¹ Endpoint: Global Search
 
 **Method:** GET  
 **URI:** `/api/v1/search?q={query}`  
 **Authentication:** Not Required
 
 ---
-### 🧾 Headers
+### ðŸ§¾ Headers
 | Key           | Value            | Required |
 | ------------- | ---------------- | -------- |
 | Accept        | application/json | Yes      |
 
 ---
-### 📥 Request Body
+### ðŸ“¥ Request Body
 *(None)*
 
 **Query Params:**
@@ -279,7 +359,7 @@ When paginated, endpoints return a `meta` block:
 | q     | string | Yes      | Search text |
 
 ---
-### 📤 Success Response
+### ðŸ“¤ Success Response
 ```json
 {
   "data": {
@@ -299,32 +379,32 @@ When paginated, endpoints return a `meta` block:
 **Explanation:** Returns two separate paginated collections inside `data` (products and requests).
 
 ---
-### 📝 Notes
+### ðŸ“ Notes
 * **Mobile Tip:** Use `meta` inside `products` or `device_requests` to handle pagination separately if required.
 
 ---
 
-## 📈 Dashboard
+## ðŸ“ˆ Dashboard
 
-### 🔹 Endpoint: User Dashboard Stats
+### ðŸ”¹ Endpoint: User Dashboard Stats
 
 **Method:** GET  
 **URI:** `/api/v1/me/dashboard`  
 **Authentication:** Required
 
 ---
-### 🧾 Headers
+### ðŸ§¾ Headers
 | Key           | Value            | Required |
 | ------------- | ---------------- | -------- |
 | Authorization | Bearer {token}   | Yes      |
 | Accept        | application/json | Yes      |
 
 ---
-### 📥 Request Body
+### ðŸ“¥ Request Body
 *(None)*
 
 ---
-### 📤 Success Response
+### ðŸ“¤ Success Response
 ```json
 {
   "data": {
@@ -343,27 +423,27 @@ When paginated, endpoints return a `meta` block:
 
 ---
 
-## 👤 Profile
+## ðŸ‘¤ Profile
 
-### 🔹 Endpoint: Get Profile
+### ðŸ”¹ Endpoint: Get Profile
 
 **Method:** GET  
 **URI:** `/api/v1/me`  
 **Authentication:** Required
 
 ---
-### 🧾 Headers
+### ðŸ§¾ Headers
 | Key           | Value            | Required |
 | ------------- | ---------------- | -------- |
 | Authorization | Bearer {token}   | Yes      |
 | Accept        | application/json | Yes      |
 
 ---
-### 📥 Request Body
+### ðŸ“¥ Request Body
 *(None)*
 
 ---
-### 📤 Success Response
+### ðŸ“¤ Success Response
 ```json
 {
   "data": {
@@ -388,21 +468,21 @@ When paginated, endpoints return a `meta` block:
 
 ---
 
-### 🔹 Endpoint: Update Profile
+### ðŸ”¹ Endpoint: Update Profile
 
 **Method:** PATCH  
 **URI:** `/api/v1/me`  
 **Authentication:** Required
 
 ---
-### 🧾 Headers
+### ðŸ§¾ Headers
 | Key           | Value            | Required |
 | ------------- | ---------------- | -------- |
 | Authorization | Bearer {token}   | Yes      |
 | Accept        | application/json | Yes      |
 
 ---
-### 📥 Request Body
+### ðŸ“¥ Request Body
 * **Content-Type:** `application/json`
 
 | Field | Type   | Required | Description |
@@ -411,30 +491,30 @@ When paginated, endpoints return a `meta` block:
 | email | string | Yes      | Valid, unique email format |
 
 ---
-### 📤 Success Response
+### ðŸ“¤ Success Response
 *(Returns the same JSON payload as Get Profile)*
 
 ---
 
-### 🔹 Endpoint: Delete Account
+### ðŸ”¹ Endpoint: Delete Account
 
 **Method:** DELETE  
 **URI:** `/api/v1/me`  
 **Authentication:** Required
 
 ---
-### 🧾 Headers
+### ðŸ§¾ Headers
 | Key           | Value            | Required |
 | ------------- | ---------------- | -------- |
 | Authorization | Bearer {token}   | Yes      |
 | Accept        | application/json | Yes      |
 
 ---
-### 📥 Request Body
+### ðŸ“¥ Request Body
 *(None)*
 
 ---
-### 📤 Success Response
+### ðŸ“¤ Success Response
 ```json
 {
   "data": null,
@@ -442,27 +522,27 @@ When paginated, endpoints return a `meta` block:
 }
 ```
 ---
-### 📝 Notes
+### ðŸ“ Notes
 * **Compliance:** Required by Apple/Google guidelines. Completely destructs profile and invalidates tokens.
 
 ---
 
-## 🛒 Products
+## ðŸ›’ Products
 
-### 🔹 Endpoint: List Products
+### ðŸ”¹ Endpoint: List Products
 
 **Method:** GET  
 **URI:** `/api/v1/products`  
 **Authentication:** Not Required
 
 ---
-### 🧾 Headers
+### ðŸ§¾ Headers
 | Key           | Value            | Required |
 | ------------- | ---------------- | -------- |
 | Accept        | application/json | Yes      |
 
 ---
-### 📥 Request Body
+### ðŸ“¥ Request Body
 *(None)*
 
 **Query Params:**
@@ -474,7 +554,7 @@ When paginated, endpoints return a `meta` block:
 | page        | integer | No       | Pagination page |
 
 ---
-### 📤 Success Response
+### ðŸ“¤ Success Response
 ```json
 {
   "data": [
@@ -511,50 +591,50 @@ When paginated, endpoints return a `meta` block:
 
 ---
 
-### 🔹 Endpoint: Product Details
+### ðŸ”¹ Endpoint: Product Details
 
 **Method:** GET  
 **URI:** `/api/v1/products/{id}`  
 **Authentication:** Not Required
 
 ---
-### 🧾 Headers
+### ðŸ§¾ Headers
 | Key           | Value            | Required |
 | ------------- | ---------------- | -------- |
 | Accept        | application/json | Yes      |
 
 ---
-### 📥 Request Body
+### ðŸ“¥ Request Body
 *(None)*
 
 ---
-### 📤 Success Response
+### ðŸ“¤ Success Response
 *(Returns a single object matching the schema inside the `data` array of List Products)*
 
 ---
-### ❌ Error Response
+### âŒ Error Response
 *(Standard 404 Not Found)*
 
 ---
 
-### 🔹 Endpoint: Categories
+### ðŸ”¹ Endpoint: Categories
 
 **Method:** GET  
 **URI:** `/api/v1/categories`  
 **Authentication:** Not Required
 
 ---
-### 🧾 Headers
+### ðŸ§¾ Headers
 | Key           | Value            | Required |
 | ------------- | ---------------- | -------- |
 | Accept        | application/json | Yes      |
 
 ---
-### 📥 Request Body
+### ðŸ“¥ Request Body
 *(None)*
 
 ---
-### 📤 Success Response
+### ðŸ“¤ Success Response
 ```json
 {
   "data": [
@@ -573,46 +653,46 @@ When paginated, endpoints return a `meta` block:
 
 ---
 
-## 🏷️ Listings
+## ðŸ·ï¸ Listings
 
-### 🔹 Endpoint: My Listings
+### ðŸ”¹ Endpoint: My Listings
 
 **Method:** GET  
 **URI:** `/api/v1/me/listings`  
 **Authentication:** Required
 
 ---
-### 🧾 Headers
+### ðŸ§¾ Headers
 | Key           | Value            | Required |
 | ------------- | ---------------- | -------- |
 | Authorization | Bearer {token}   | Yes      |
 | Accept        | application/json | Yes      |
 
 ---
-### 📥 Request Body
+### ðŸ“¥ Request Body
 *(None)*
 
 ---
-### 📤 Success Response
+### ðŸ“¤ Success Response
 *(Returns Paginated array of the user's products. Identical payload structure to GET /products)*
 
 ---
 
-### 🔹 Endpoint: Create Listing
+### ðŸ”¹ Endpoint: Create Listing
 
 **Method:** POST  
 **URI:** `/api/v1/me/listings`  
 **Authentication:** Required
 
 ---
-### 🧾 Headers
+### ðŸ§¾ Headers
 | Key           | Value            | Required |
 | ------------- | ---------------- | -------- |
 | Authorization | Bearer {token}   | Yes      |
 | Accept        | application/json | Yes      |
 
 ---
-### 📥 Request Body
+### ðŸ“¥ Request Body
 * **Content-Type:** `multipart/form-data`
 
 | Field | Type   | Required | Description |
@@ -630,7 +710,7 @@ When paginated, endpoints return a `meta` block:
 | disassembled_is | boolean | No | Send as 0 or 1 |
 | images[] | file array | Yes | Array of files (`jpeg`, `png`, `webp`). Max 5. |
 
-👉 **Handling `images[]` in Flutter:**
+ðŸ‘‰ **Handling `images[]` in Flutter:**
 Use a `MultipartRequest`. Loop through your images and add them exactly using the key `'images[]'`:
 ```dart
 for (var file in files) {
@@ -639,26 +719,26 @@ for (var file in files) {
 ```
 
 ---
-### 📤 Success Response
+### ðŸ“¤ Success Response
 *(Returns the created Product object)*
 
 ---
 
-### 🔹 Endpoint: Update Listing
+### ðŸ”¹ Endpoint: Update Listing
 
 **Method:** POST  
 **URI:** `/api/v1/me/listings/{id}/update`  
 **Authentication:** Required
 
 ---
-### 🧾 Headers
+### ðŸ§¾ Headers
 | Key           | Value            | Required |
 | ------------- | ---------------- | -------- |
 | Authorization | Bearer {token}   | Yes      |
 | Accept        | application/json | Yes      |
 
 ---
-### 📥 Request Body
+### ðŸ“¥ Request Body
 * **Content-Type:** `multipart/form-data`
 
 | Field | Type   | Required | Description |
@@ -674,38 +754,38 @@ for (var file in files) {
 | images[] | file array | No | New images to append |
 
 ---
-### 📤 Success Response
+### ðŸ“¤ Success Response
 *(Returns the updated Product object)*
 
 ---
-### ❌ Error Response
+### âŒ Error Response
 *(Standard 422 if Total Images (Existing - Deleted + New) exceeds 5)*
 
 ---
-### 📝 Notes
+### ðŸ“ Notes
 * **Mobile Tip:** Notice this is a **POST** request, not PATCH. PHP safely parses `multipart/form-data` exclusively on POST. 
 
 ---
 
-### 🔹 Endpoint: Delete Listing
+### ðŸ”¹ Endpoint: Delete Listing
 
 **Method:** DELETE  
 **URI:** `/api/v1/me/listings/{id}`  
 **Authentication:** Required
 
 ---
-### 🧾 Headers
+### ðŸ§¾ Headers
 | Key           | Value            | Required |
 | ------------- | ---------------- | -------- |
 | Authorization | Bearer {token}   | Yes      |
 | Accept        | application/json | Yes      |
 
 ---
-### 📥 Request Body
+### ðŸ“¥ Request Body
 *(None)*
 
 ---
-### 📤 Success Response
+### ðŸ“¤ Success Response
 ```json
 {
   "data": null,
@@ -715,27 +795,27 @@ for (var file in files) {
 
 ---
 
-## 📱 Device Requests
+## ðŸ“± Device Requests
 
-### 🔹 Endpoint: List Device Requests
+### ðŸ”¹ Endpoint: List Device Requests
 
 **Method:** GET  
 **URI:** `/api/v1/device-requests`  
 **Authentication:** Required
 
 ---
-### 🧾 Headers
+### ðŸ§¾ Headers
 | Key           | Value            | Required |
 | ------------- | ---------------- | -------- |
 | Authorization | Bearer {token}   | Yes      |
 | Accept        | application/json | Yes      |
 
 ---
-### 📥 Request Body
+### ðŸ“¥ Request Body
 *(None)*
 
 ---
-### 📤 Success Response
+### ðŸ“¤ Success Response
 ```json
 {
   "data": [
@@ -761,21 +841,21 @@ for (var file in files) {
 
 ---
 
-### 🔹 Endpoint: Create Device Request
+### ðŸ”¹ Endpoint: Create Device Request
 
 **Method:** POST  
 **URI:** `/api/v1/device-requests`  
 **Authentication:** Required
 
 ---
-### 🧾 Headers
+### ðŸ§¾ Headers
 | Key           | Value            | Required |
 | ------------- | ---------------- | -------- |
 | Authorization | Bearer {token}   | Yes      |
 | Accept        | application/json | Yes      |
 
 ---
-### 📥 Request Body
+### ðŸ“¥ Request Body
 * **Content-Type:** `application/json`
 
 | Field | Type   | Required | Description |
@@ -785,30 +865,30 @@ for (var file in files) {
 | notes | string | No       | Up to 1000 chars |
 
 ---
-### 📤 Success Response
+### ðŸ“¤ Success Response
 *(Returns the created Device Request object)*
 
 ---
 
-### 🔹 Endpoint: Offer Device Fulfillment
+### ðŸ”¹ Endpoint: Offer Device Fulfillment
 
 **Method:** POST  
 **URI:** `/api/v1/device-requests/{id}/offer`  
 **Authentication:** Required
 
 ---
-### 🧾 Headers
+### ðŸ§¾ Headers
 | Key           | Value            | Required |
 | ------------- | ---------------- | -------- |
 | Authorization | Bearer {token}   | Yes      |
 | Accept        | application/json | Yes      |
 
 ---
-### 📥 Request Body
+### ðŸ“¥ Request Body
 *(None)*
 
 ---
-### 📤 Success Response
+### ðŸ“¤ Success Response
 ```json
 {
   "data": null,
@@ -817,7 +897,7 @@ for (var file in files) {
 ```
 
 ---
-### ❌ Error Response
+### âŒ Error Response
 **Forbidden (Offering on your own request):**
 ```json
 {
@@ -835,27 +915,27 @@ for (var file in files) {
 
 ---
 
-## 📦 Orders
+## ðŸ“¦ Orders
 
-### 🔹 Endpoint: My Purchases
+### ðŸ”¹ Endpoint: My Purchases
 
 **Method:** GET  
 **URI:** `/api/v1/orders`  
 **Authentication:** Required
 
 ---
-### 🧾 Headers
+### ðŸ§¾ Headers
 | Key           | Value            | Required |
 | ------------- | ---------------- | -------- |
 | Authorization | Bearer {token}   | Yes      |
 | Accept        | application/json | Yes      |
 
 ---
-### 📥 Request Body
+### ðŸ“¥ Request Body
 *(None)*
 
 ---
-### 📤 Success Response
+### ðŸ“¤ Success Response
 ```json
 {
   "data": [
@@ -882,21 +962,21 @@ for (var file in files) {
 
 ---
 
-### 🔹 Endpoint: Create Order
+### ðŸ”¹ Endpoint: Create Order
 
 **Method:** POST  
 **URI:** `/api/v1/orders`  
 **Authentication:** Required
 
 ---
-### 🧾 Headers
+### ðŸ§¾ Headers
 | Key           | Value            | Required |
 | ------------- | ---------------- | -------- |
 | Authorization | Bearer {token}   | Yes      |
 | Accept        | application/json | Yes      |
 
 ---
-### 📥 Request Body
+### ðŸ“¥ Request Body
 * **Content-Type:** `application/json`
 
 | Field | Type   | Required | Description |
@@ -907,21 +987,21 @@ for (var file in files) {
 | color | integer | No | Product variant ID (if applicable) |
 
 ---
-### 📤 Success Response
+### ðŸ“¤ Success Response
 *(Returns the created Order Object)*
 
 ---
-### ❌ Error Response
+### âŒ Error Response
 ```json
 {
-  "message": "رصيد المحفظة غير كافي. يرجى شحن الرصيد أو اختيار طريقة دفع أخرى.",
+  "message": "Ø±ØµÙŠØ¯ Ø§Ù„Ù…Ø­ÙØ¸Ø© ØºÙŠØ± ÙƒØ§ÙÙŠ. ÙŠØ±Ø¬Ù‰ Ø´Ø­Ù† Ø§Ù„Ø±ØµÙŠØ¯ Ø£Ùˆ Ø§Ø®ØªÙŠØ§Ø± Ø·Ø±ÙŠÙ‚Ø© Ø¯ÙØ¹ Ø£Ø®Ø±Ù‰.",
   "code": "ORDER_WALLET_BALANCE_INSUFFICIENT"
 }
 ```
 
 ---
 
-### 🔹 Endpoint: Order Details
+### ðŸ”¹ Endpoint: Order Details
 
 **Method:** GET  
 **URI:** `/api/v1/orders/{id}`  
@@ -932,7 +1012,7 @@ for (var file in files) {
 
 ---
 
-### 🔹 Endpoint: My Sales Orders
+### ðŸ”¹ Endpoint: My Sales Orders
 
 **Method:** GET  
 **URI:** `/api/v1/sales/orders`  
@@ -943,39 +1023,39 @@ for (var file in files) {
 
 ---
 
-### 🔹 Endpoint: Approve Sale
+### ðŸ”¹ Endpoint: Approve Sale
 
 **Method:** POST  
 **URI:** `/api/v1/sales/orders/{id}/approve`  
 **Authentication:** Required
 
 ---
-### 🧾 Headers
+### ðŸ§¾ Headers
 | Key           | Value            | Required |
 | ------------- | ---------------- | -------- |
 | Authorization | Bearer {token}   | Yes      |
 | Accept        | application/json | Yes      |
 
 ---
-### 📥 Request Body
+### ðŸ“¥ Request Body
 *(None)*
 
 ---
-### 📤 Success Response
+### ðŸ“¤ Success Response
 *(Returns the updated Order Object with `approvals.seller = true` and `status = approved`)*
 
 ---
-### ❌ Error Response
+### âŒ Error Response
 ```json
 {
-  "message": "يجب انتظار موافقة الإدارة أولاً.",
+  "message": "ÙŠØ¬Ø¨ Ø§Ù†ØªØ¸Ø§Ø± Ù…ÙˆØ§ÙÙ‚Ø© Ø§Ù„Ø¥Ø¯Ø§Ø±Ø© Ø£ÙˆÙ„Ø§Ù‹.",
   "code": "ORDER_ADMIN_APPROVAL_REQUIRED"
 }
 ```
 
 ---
 
-### 🔹 Endpoint: Reject Sale
+### ðŸ”¹ Endpoint: Reject Sale
 
 **Method:** POST  
 **URI:** `/api/v1/sales/orders/{id}/reject`  
@@ -986,23 +1066,23 @@ for (var file in files) {
 
 ---
 
-## 💳 Wallet
+## ðŸ’³ Wallet
 
-### 🔹 Endpoint: Wallet Summary
+### ðŸ”¹ Endpoint: Wallet Summary
 
 **Method:** GET  
 **URI:** `/api/v1/wallet`  
 **Authentication:** Required
 
 ---
-### 🧾 Headers
+### ðŸ§¾ Headers
 | Key           | Value            | Required |
 | ------------- | ---------------- | -------- |
 | Authorization | Bearer {token}   | Yes      |
 | Accept        | application/json | Yes      |
 
 ---
-### 📤 Success Response
+### ðŸ“¤ Success Response
 ```json
 {
   "data": {
@@ -1018,14 +1098,14 @@ for (var file in files) {
 
 ---
 
-### 🔹 Endpoint: Wallet Transactions
+### ðŸ”¹ Endpoint: Wallet Transactions
 
 **Method:** GET  
 **URI:** `/api/v1/wallet/transactions`  
 **Authentication:** Required
 
 ---
-### 📤 Success Response
+### ðŸ“¤ Success Response
 ```json
 {
   "data": [
@@ -1048,7 +1128,7 @@ for (var file in files) {
 
 ---
 
-### 🔹 Endpoint: Recharge Requests
+### ðŸ”¹ Endpoint: Recharge Requests
 
 **Method:** GET  
 **URI:** `/api/v1/wallet/recharge-requests`  
@@ -1059,21 +1139,21 @@ for (var file in files) {
 
 ---
 
-### 🔹 Endpoint: Create Recharge Request
+### ðŸ”¹ Endpoint: Create Recharge Request
 
 **Method:** POST  
 **URI:** `/api/v1/wallet/recharge-requests`  
 **Authentication:** Required
 
 ---
-### 🧾 Headers
+### ðŸ§¾ Headers
 | Key           | Value            | Required |
 | ------------- | ---------------- | -------- |
 | Authorization | Bearer {token}   | Yes      |
 | Accept        | application/json | Yes      |
 
 ---
-### 📥 Request Body
+### ðŸ“¥ Request Body
 * **Content-Type:** `multipart/form-data`
 
 | Field | Type   | Required | Description |
@@ -1083,39 +1163,39 @@ for (var file in files) {
 | proof  | file   | No      | Image receipt (`jpeg`, `png`, max 2048 KB) |
 
 ---
-### 📤 Success Response
+### ðŸ“¤ Success Response
 *(Returns the created Recharge Request object)*
 
 ---
-### 📝 Notes
+### ðŸ“ Notes
 * Creating a recharge request does **not** instantly add balance. It must be approved by an Admin workflow first.
 
 ---
 
-## 🔔 Notifications
+## ðŸ”” Notifications
 
-### 🔹 Endpoint: List Notifications
+### ðŸ”¹ Endpoint: List Notifications
 
 **Method:** GET  
 **URI:** `/api/v1/notifications`  
 **Authentication:** Required
 
 ---
-### 🧾 Headers
+### ðŸ§¾ Headers
 | Key           | Value            | Required |
 | ------------- | ---------------- | -------- |
 | Authorization | Bearer {token}   | Yes      |
 | Accept        | application/json | Yes      |
 
 ---
-### 📤 Success Response
+### ðŸ“¤ Success Response
 ```json
 {
   "data": [
     {
       "id": "uuid-1234",
-      "title": "تم استلام طلبك",
-      "message": "تم استلام طلبك #14 بنجاح.",
+      "title": "ØªÙ… Ø§Ø³ØªÙ„Ø§Ù… Ø·Ù„Ø¨Ùƒ",
+      "message": "ØªÙ… Ø§Ø³ØªÙ„Ø§Ù… Ø·Ù„Ø¨Ùƒ #14 Ø¨Ù†Ø¬Ø§Ø­.",
       "type": "order",
       "is_read": false,
       "read_at": null,
@@ -1132,7 +1212,7 @@ for (var file in files) {
 
 ---
 
-### 🔹 Endpoint: Mark As Read
+### ðŸ”¹ Endpoint: Mark As Read
 
 **Method:** POST  
 **URI:** `/api/v1/notifications/{id}/read`  
@@ -1143,14 +1223,14 @@ for (var file in files) {
 
 ---
 
-### 🔹 Endpoint: Mark All As Read
+### ðŸ”¹ Endpoint: Mark All As Read
 
 **Method:** POST  
 **URI:** `/api/v1/notifications/read-all`  
 **Authentication:** Required
 
 ---
-### 📤 Success Response
+### ðŸ“¤ Success Response
 ```json
 {
   "data": {
@@ -1159,3 +1239,4 @@ for (var file in files) {
   "message": "Notifications marked as read successfully."
 }
 ```
+
