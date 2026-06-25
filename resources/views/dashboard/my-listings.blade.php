@@ -28,11 +28,7 @@
                              @if($product->status == 'available') متاح @elseif($product->status == 'sold') مباع @else مخفي @endif
                         </span>
                         <div class="product-img-container">
-                            @if($product->images->count() > 0)
-                                <img src="{{ asset('storage/' . $product->images->first()->image_path) }}" alt="{{ $product->brand }} {{ $product->model }}">
-                            @else
-                                <img src="https://images.unsplash.com/photo-1510557880182-3d4d3cba35a5?q=80&w=2670&auto=format&fit=crop" alt="{{ $product->brand }} {{ $product->model }}">
-                            @endif
+                            <img src="{{ $product->primary_image_url }}" alt="{{ $product->brand }} {{ $product->model }}">
                         </div>
                         <div class="product-body">
                             <h5 class="mb-1 text-truncate">{{ $product->brand }} {{ $product->model }}</h5>

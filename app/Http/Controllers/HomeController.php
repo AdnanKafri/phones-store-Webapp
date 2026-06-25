@@ -11,7 +11,7 @@ class HomeController extends Controller
     public function index()
     {
         $products = Product::whereIn('status', ['available', 'sold'])
-            ->with(['category', 'seller'])
+            ->with(['category', 'seller', 'images', 'variants'])
             ->latest()
             ->take(10)
             ->get();

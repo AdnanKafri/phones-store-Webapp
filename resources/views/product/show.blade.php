@@ -21,7 +21,7 @@
             <div class="col-lg-7">
                 <div class="product-gallery-main">
                     @if($product->images->count() > 0)
-                        <img id="mainImage" src="{{ asset('storage/' . $product->images->first()->image_path) }}" alt="{{ $product->brand }}">
+                        <img id="mainImage" src="{{ $product->primary_image_url }}" alt="{{ $product->brand }}">
                     @else
                         <div class="w-100 h-100 bg-light d-flex align-items-center justify-content-center text-muted" style="min-height: 400px;">
                             <i class="bi bi-phone fs-1"></i>
@@ -31,7 +31,7 @@
                 <div class="thumbnail-container">
                     @foreach($product->images as $image)
                         <div class="thumbnail {{ $loop->first ? 'active' : '' }}" onclick="changeImage(this)">
-                            <img src="{{ asset('storage/' . $image->image_path) }}" alt="Thumbnail">
+                            <img src="{{ $image->url }}" alt="Thumbnail">
                         </div>
                     @endforeach
                 </div>
@@ -360,7 +360,7 @@
                      <div class="product-card h-100">
                          <div class="product-img-container">
                              @if($related->images->count() > 0)
-                                <img src="{{ asset('storage/' . $related->images->first()->image_path) }}" 
+                                <img src="{{ $related->primary_image_url }}" 
                                      alt="{{ $related->brand }}">
                              @else
                                 <div class="w-100 h-100 bg-light d-flex align-items-center justify-content-center text-muted">

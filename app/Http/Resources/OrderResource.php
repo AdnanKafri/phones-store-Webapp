@@ -60,7 +60,7 @@ class OrderResource extends JsonResource
                         ? $product->images->map(function ($image) {
                             return [
                                 'id' => $image->id,
-                                'url' => asset('storage/'.$image->image_path),
+                                'url' => $image->url,
                                 'is_primary' => (bool) $image->is_primary,
                             ];
                         })->values()->all()

@@ -26,8 +26,8 @@
                                     <tr>
                                         <td class="ps-4">
                                             <div class="d-flex align-items-center">
-                                                @if($order->product->images->count() > 0)
-                                                    <img src="{{ asset('storage/' . $order->product->images->first()->image_path) }}" class="rounded me-3" width="50" height="50" style="object-fit: cover;">
+                                                @if($order->product)
+                                                    <img src="{{ $order->product->primary_image_url }}" class="rounded me-3" width="50" height="50" style="object-fit: cover;" alt="{{ $order->product->brand }} {{ $order->product->model }}">
                                                 @else
                                                     <div class="bg-light rounded me-3 d-flex align-items-center justify-content-center" style="width: 50px; height: 50px;">
                                                         <i class="bi bi-phone text-muted"></i>

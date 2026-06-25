@@ -53,7 +53,7 @@
                                 <div class="existing-images-grid">
                                     @foreach($product->images as $image)
                                         <div class="existing-image-item">
-                                            <img src="{{ asset('storage/' . $image->image_path) }}" alt="Product image">
+                                            <img src="{{ $image->url }}" alt="Product image">
                                             <div class="image-overlay">
                                                 <label class="delete-checkbox">
                                                     <input type="checkbox" name="delete_images[]" value="{{ $image->id }}">

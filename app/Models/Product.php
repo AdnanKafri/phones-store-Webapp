@@ -90,9 +90,14 @@ class Product extends Model
 
     public function getPrimaryImageUrlAttribute()
     {
-        if ($this->images->count() > 0) {
-            return asset('storage/' . $this->images->first()->image_path);
+        $firstImage = $this->relationLoaded('images')
+            ? $this->images->first()
+            : $this->images()->first();
+
+        if ($firstImage) {
+            return $firstImage->url;
         }
-        return asset('images/placeholder-phone.png'); // Ensure this exists or use a CDN/Generic URL
+
+        return asset('images/placeholder-phone.svg');
     }
 }

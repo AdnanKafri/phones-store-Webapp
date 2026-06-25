@@ -70,14 +70,7 @@
                             </span>
                         @endif
                         <div class="product-img-container">
-                            @if($product->images->count() > 0)
-                                <img src="{{ asset('storage/' . $product->images->first()->image_path) }}" 
-                                     alt="{{ $product->brand }} {{ $product->model }}">
-                            @else
-                                <div class="w-100 h-100 bg-light d-flex align-items-center justify-content-center text-muted">
-                                    <i class="bi bi-phone fs-1"></i>
-                                </div>
-                            @endif
+                            <img src="{{ $product->primary_image_url }}" alt="{{ $product->brand }} {{ $product->model }}">
                         </div>
                         <div class="product-body">
                             <h5 class="mb-1 text-truncate">{{ $product->brand }} {{ $product->model }}</h5>

@@ -149,7 +149,7 @@
                                     <div class="col-6 col-md-3">
                                         <div class="card h-100 {{ $image->is_primary ? 'border-primary' : '' }}">
                                             <div class="position-relative">
-                                                <img src="{{ asset('storage/' . $image->image_path) }}" class="card-img-top" alt="Product Image" style="height: 150px; object-fit: cover;">
+                                                <img src="{{ $image->url }}" class="card-img-top" alt="Product Image" style="height: 150px; object-fit: cover;">
                                                 @if($image->is_primary)
                                                     <span class="position-absolute top-0 start-0 badge bg-primary m-2">Primary</span>
                                                 @endif

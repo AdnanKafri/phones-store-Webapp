@@ -190,7 +190,7 @@
                         <div class="carousel-inner rounded">
                             @foreach($product->images as $key => $image)
                                 <div class="carousel-item {{ $key == 0 ? 'active' : '' }}">
-                                    <img src="{{ asset('storage/' . $image->image_path) }}" class="d-block w-100" alt="Product Image" style="height: 300px; object-fit: cover;">
+                                    <img src="{{ $image->url }}" class="d-block w-100" alt="Product Image" style="height: 300px; object-fit: cover;">
                                     @if($image->is_primary)
                                         <div class="carousel-caption d-none d-md-block">
                                             <span class="badge bg-primary">Primary Image</span>
@@ -214,7 +214,7 @@
                     <div class="row g-2 mt-2">
                         @foreach($product->images as $key => $image)
                             <div class="col-3">
-                                <img src="{{ asset('storage/' . $image->image_path) }}" class="img-thumbnail {{ $image->is_primary ? 'border-primary' : '' }}" alt="Thumbnail" style="height: 60px; width: 100%; object-fit: cover; cursor: pointer;" onclick="document.querySelector('#productCarousel').querySelector('.carousel-item.active').classList.remove('active'); document.querySelectorAll('#productCarousel .carousel-item')[{{ $key }}].classList.add('active');">
+                                <img src="{{ $image->url }}" class="img-thumbnail {{ $image->is_primary ? 'border-primary' : '' }}" alt="Thumbnail" style="height: 60px; width: 100%; object-fit: cover; cursor: pointer;" onclick="document.querySelector('#productCarousel').querySelector('.carousel-item.active').classList.remove('active'); document.querySelectorAll('#productCarousel .carousel-item')[{{ $key }}].classList.add('active');">
                             </div>
                         @endforeach
                     </div>
