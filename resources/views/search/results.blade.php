@@ -1,10 +1,11 @@
 @extends('layouts.app')
 
-@section('title', 'AI Search: ' . $query)
+@section('title', 'البحث الذكي: ' . $query)
 
 @section('content')
 <div
     class="container py-5 ai-results-page"
+    dir="rtl"
     data-ai-endpoint="{{ route('api.v1.ai.advisor') }}"
     data-search-url="{{ route('search') }}"
     data-product-base-url="{{ url('/products') }}"
@@ -20,7 +21,7 @@
             <div class="ai-results-hero__copy">
                 <span class="ai-results-hero__badge">
                     <i class="bi bi-stars"></i>
-                    <span>AI Phone Advisor</span>
+                    <span>مستشار الهواتف الذكي</span>
                 </span>
                 <h1 class="fw-bold mb-2">ابحث عن الهاتف المناسب بلغة طبيعية</h1>
                 <p class="text-muted mb-0">
@@ -48,7 +49,7 @@
                 </div>
                 <div class="ai-results-form__examples">
                     <button type="button" class="btn btn-outline-secondary btn-sm rounded-pill ai-example-chip" data-query="بدي موبايل قوي للألعاب بسعر لا يتجاوز 450$">ألعاب تحت 450$</button>
-                    <button type="button" class="btn btn-outline-secondary btn-sm rounded-pill ai-example-chip" data-query="I need a used iPhone with strong camera">Used iPhone camera</button>
+                    <button type="button" class="btn btn-outline-secondary btn-sm rounded-pill ai-example-chip" data-query="أريد iPhone مستعمل بكاميرا قوية">iPhone مستعمل بكاميرا قوية</button>
                     <button type="button" class="btn btn-outline-secondary btn-sm rounded-pill ai-example-chip" data-query="هاتف بطارية قوية للاستخدام اليومي">بطارية قوية</button>
                 </div>
             </form>

@@ -45,6 +45,18 @@ class ProductResource extends JsonResource
                     'slug' => $this->category->slug,
                 ];
             }),
+            'device' => $this->whenLoaded('device', function () {
+                if (! $this->device) {
+                    return null;
+                }
+
+                return [
+                    'id' => $this->device->id,
+                    'brand' => $this->device->brand,
+                    'model_name' => $this->device->model_name,
+                    'slug' => $this->device->slug,
+                ];
+            }),
             'images' => $this->whenLoaded('images', function () {
                 return $this->images->map(function ($image) {
                     return [

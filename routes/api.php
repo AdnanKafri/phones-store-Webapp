@@ -2,8 +2,10 @@
 
 use App\Http\Controllers\Api\V1\Auth\AuthController;
 use App\Http\Controllers\Api\V1\Ai\AiAdvisorController;
+use App\Http\Controllers\Api\V1\CompareController;
 use App\Http\Controllers\Api\V1\Catalog\CategoryController as ApiCategoryController;
 use App\Http\Controllers\Api\V1\Catalog\ProductController as ApiProductController;
+use App\Http\Controllers\Api\V1\Devices\DeviceController as ApiDeviceController;
 use App\Http\Controllers\Api\V1\Listings\ListingController;
 use App\Http\Controllers\Api\V1\Notifications\NotificationController as ApiNotificationController;
 use App\Http\Controllers\Api\V1\GeneralController;
@@ -31,6 +33,9 @@ Route::get('search', [GeneralController::class, 'search'])->name('api.v1.search'
 Route::get('products', [ApiProductController::class, 'index'])->name('api.v1.products.index');
 Route::get('products/{product}', [ApiProductController::class, 'show'])->name('api.v1.products.show');
 Route::get('categories', [ApiCategoryController::class, 'index'])->name('api.v1.categories.index');
+Route::get('devices', [ApiDeviceController::class, 'index'])->name('api.v1.devices.index');
+Route::get('devices/{device}', [ApiDeviceController::class, 'show'])->name('api.v1.devices.show');
+Route::post('compare', CompareController::class)->name('api.v1.compare');
 Route::post('ai/advisor', AiAdvisorController::class)->name('api.v1.ai.advisor');
 
 Route::middleware('auth:sanctum')->group(function () {

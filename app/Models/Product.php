@@ -9,6 +9,7 @@ class Product extends Model
     protected $fillable = [
         'user_id',
         'category_id',
+        'device_id',
         'brand',
         'model',
         'color',
@@ -40,6 +41,11 @@ class Product extends Model
     public function category()
     {
         return $this->belongsTo(Category::class);
+    }
+
+    public function device()
+    {
+        return $this->belongsTo(Device::class);
     }
 
     public function images()

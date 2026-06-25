@@ -74,6 +74,13 @@
                     <div class="mb-4">
                         <span class="product-price-large" dir="ltr">${{ number_format($product->price, 2) }}</span>
                     </div>
+                    @if($compareDevice)
+                        <div class="mb-4">
+                            <a href="{{ route('compare.index', ['left_device_id' => $compareDevice->id]) }}" class="btn btn-outline-primary rounded-pill px-4">
+                                <i class="bi bi-layout-split me-2"></i>قارن هذا الموديل
+                            </a>
+                        </div>
+                    @endif
 
                     <!-- Seller Card -->
                     <div class="seller-card mb-4">

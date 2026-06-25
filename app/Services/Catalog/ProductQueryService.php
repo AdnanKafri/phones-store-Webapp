@@ -74,6 +74,6 @@ class ProductQueryService
 
     private function apiRelations(): array
     {
-        return ['seller', 'category', 'images', 'variants'];
+        return ['seller', 'category', 'device', 'images', 'variants'];
     }
 }

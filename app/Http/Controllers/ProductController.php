@@ -4,6 +4,7 @@ namespace App\Http\Controllers;
 
 use App\Models\Product;
 use App\Services\Catalog\ProductQueryService;
+use App\Services\Devices\DeviceCatalogService;
 use App\Services\Listings\ListingService;
 use Illuminate\Http\Request;
 
@@ -11,6 +12,7 @@ class ProductController extends Controller
 {
     public function __construct(
         private ProductQueryService $productQueryService,
+        private DeviceCatalogService $deviceCatalogService,
         private ListingService $listingService,
     ) {
     }
@@ -142,7 +144,8 @@ class ProductController extends Controller
     {
         $product = $this->productQueryService->loadPublicProduct($product);
         $relatedProducts = $this->productQueryService->getRelatedProducts($product);
+        $compareDevice = $this->deviceCatalogService->resolveProductDevice($product);
 
-        return view('product.show', compact('product', 'relatedProducts'));
+        return view('product.show', compact('product', 'relatedProducts', 'compareDevice'));
     }
 }
