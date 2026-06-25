@@ -14,6 +14,7 @@ use Illuminate\Support\Facades\Validator;
 class AiAdvisorService
 {
     private const OUT_OF_SCOPE_ERROR = 'OUT_OF_SCOPE';
+    private const DEFAULT_LIMIT = 20;
 
     private const ALLOWED_FILTER_KEYS = [
         'price_max',
@@ -27,11 +28,12 @@ class AiAdvisorService
     public function advise(string $query): array
     {
         $filters = $this->generateFilters($query);
-        $products = $this->findProducts($filters);
+        $searchResult = $this->findProductsWithFallback($filters);
 
         return [
             'filters' => $filters,
-            'products' => $products,
+            'products' => $searchResult['products'],
+            'search_meta' => $searchResult['search_meta'],
         ];
     }
 
@@ -91,7 +93,56 @@ class AiAdvisorService
         return $this->validateFilters($decoded);
     }
 
-    public function findProducts(array $filters): Collection
+    public function findProducts(array $filters, int $limit = self::DEFAULT_LIMIT): Collection
+    {
+        $query = $this->buildProductQuery($filters);
+        $this->applyOrdering($query, $filters);
+
+        return $query->limit($limit)->get();
+    }
+
+    public function findProductsWithFallback(array $filters, int $limit = self::DEFAULT_LIMIT): array
+    {
+        $attempts = $this->buildSearchAttempts($filters);
+        $lastProducts = collect();
+        $lastAttempt = [
+            'strategy' => 'strict',
+            'filters' => $filters,
+        ];
+
+        foreach ($attempts as $attempt) {
+            $products = $this->findProducts($attempt['filters'], $limit);
+
+            if ($products->isNotEmpty()) {
+                return [
+                    'products' => $products,
+                    'search_meta' => [
+                        'fallback_applied' => $attempt['strategy'] !== 'strict',
+                        'match_strategy' => $attempt['strategy'],
+                        'result_count' => $products->count(),
+                        'applied_filters' => $attempt['filters'],
+                        'relaxed_filters' => $this->detectRelaxedFilters($filters, $attempt['filters']),
+                    ],
+                ];
+            }
+
+            $lastProducts = $products;
+            $lastAttempt = $attempt;
+        }
+
+        return [
+            'products' => $lastProducts,
+            'search_meta' => [
+                'fallback_applied' => count($attempts) > 1,
+                'match_strategy' => $lastAttempt['strategy'].'_no_results',
+                'result_count' => 0,
+                'applied_filters' => $lastAttempt['filters'],
+                'relaxed_filters' => $this->detectRelaxedFilters($filters, $lastAttempt['filters']),
+            ],
+        ];
+    }
+
+    private function buildProductQuery(array $filters): Builder
     {
         $query = Product::query()
             ->with(['seller', 'category', 'images', 'variants'])
@@ -125,7 +176,7 @@ class AiAdvisorService
 
         $this->applyHeuristicFilters($query, $filters);
 
-        return $query->latest()->limit(20)->get();
+        return $query;
     }
 
     private function buildPrompt(string $query): string
@@ -358,5 +409,88 @@ PROMPT;
                     ->orWhere('accessories', 'like', '%'.$keyword.'%');
             }
         });
+    }
+
+    private function applyOrdering(Builder $query, array $filters): void
+    {
+        if (isset($filters['brand'])) {
+            $brand = strtolower($filters['brand']);
+
+            $query->orderByRaw(
+                'CASE
+                    WHEN LOWER(brand) = ? THEN 0
+                    WHEN LOWER(brand) LIKE ? THEN 1
+                    ELSE 2
+                END',
+                [$brand, '%'.$brand.'%']
+            );
+        }
+
+        $query->latest();
+    }
+
+    private function buildSearchAttempts(array $filters): array
+    {
+        $attempts = [];
+        $seen = [];
+
+        $this->pushAttempt($attempts, $seen, 'strict', $filters);
+        $withoutPreferences = Arr::except($filters, ['performance', 'use_case']);
+        $this->pushAttempt($attempts, $seen, 'without_preferences', $withoutPreferences);
+
+        $relaxedBudget = $this->relaxBudgetFilters($withoutPreferences);
+        $this->pushAttempt($attempts, $seen, 'relaxed_budget', $relaxedBudget);
+        $this->pushAttempt($attempts, $seen, 'flexible_condition', Arr::except($relaxedBudget, ['condition']));
+
+        $brandOrBudget = Arr::only($relaxedBudget, ['brand', 'price_min', 'price_max']);
+        $this->pushAttempt($attempts, $seen, 'brand_or_budget', $brandOrBudget);
+
+        return $attempts;
+    }
+
+    private function pushAttempt(array &$attempts, array &$seen, string $strategy, array $filters): void
+    {
+        $signature = md5(json_encode($filters));
+
+        if (isset($seen[$signature])) {
+            return;
+        }
+
+        $seen[$signature] = true;
+        $attempts[] = [
+            'strategy' => $strategy,
+            'filters' => $filters,
+        ];
+    }
+
+    private function relaxBudgetFilters(array $filters): array
+    {
+        $relaxed = $filters;
+
+        unset($relaxed['price_min']);
+
+        if (isset($relaxed['price_max'])) {
+            $relaxed['price_max'] = round($relaxed['price_max'] * 1.15, 2);
+        }
+
+        return $relaxed;
+    }
+
+    private function detectRelaxedFilters(array $originalFilters, array $appliedFilters): array
+    {
+        $relaxed = [];
+
+        foreach ($originalFilters as $key => $value) {
+            if (! array_key_exists($key, $appliedFilters)) {
+                $relaxed[] = $key;
+                continue;
+            }
+
+            if ($appliedFilters[$key] !== $value) {
+                $relaxed[] = $key;
+            }
+        }
+
+        return array_values(array_unique($relaxed));
     }
 }

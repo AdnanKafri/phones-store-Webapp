@@ -33,33 +33,12 @@ class HomeController extends Controller
     }
     public function search(Request $request)
     {
-        $query = $request->input('q');
-        
+        $query = trim((string) $request->input('q'));
+
         if (empty($query)) {
             return redirect()->back();
         }
 
-        $products = Product::where('status', 'available')
-            ->where(function($q) use ($query) {
-                $q->where('brand', 'like', "%{$query}%")
-                  ->orWhere('model', 'like', "%{$query}%")
-                  ->orWhere('category_id', function($q) use ($query) { 
-                      $q->select('id')->from('categories')->where('name', 'like', "%{$query}%");
-                  });
-            })
-            ->with(['category', 'seller'])
-            ->latest()
-            ->get();
-
-        $requests = \App\Models\DeviceRequest::where('status', 'approved')
-            ->where(function($q) use ($query) {
-                $q->where('brand', 'like', "%{$query}%")
-                  ->orWhere('model', 'like', "%{$query}%");
-            })
-            ->with('user')
-            ->latest()
-            ->get();
-
-        return view('search.results', compact('products', 'requests', 'query'));
+        return view('search.results', compact('query'));
     }
 }

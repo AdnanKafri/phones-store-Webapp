@@ -1,170 +1,380 @@
 @extends('layouts.app')
 
-@section('title', 'نتائج البحث: ' . $query)
+@section('title', 'AI Search: ' . $query)
 
 @section('content')
-<div class="container py-5">
+<div
+    class="container py-5 ai-results-page"
+    data-ai-endpoint="{{ route('api.v1.ai.advisor') }}"
+    data-search-url="{{ route('search') }}"
+    data-product-base-url="{{ url('/products') }}"
+>
     <div class="mb-4">
         <nav aria-label="breadcrumb">
             <ol class="breadcrumb">
                 <li class="breadcrumb-item"><a href="{{ route('home') }}">الرئيسية</a></li>
-                <li class="breadcrumb-item active" aria-current="page">نتائج البحث</li>
+                <li class="breadcrumb-item active" aria-current="page">البحث الذكي</li>
             </ol>
         </nav>
-        <h2 class="fw-bold mb-1">نتائج البحث عن: <span class="text-primary">"{{ $query }}"</span></h2>
-        <p class="text-muted">نظهر لك المنتجات وطلبات الأجهزة المطابقة لبحثك.</p>
+        <div class="ai-results-hero">
+            <div class="ai-results-hero__copy">
+                <span class="ai-results-hero__badge">
+                    <i class="bi bi-stars"></i>
+                    <span>AI Phone Advisor</span>
+                </span>
+                <h1 class="fw-bold mb-2">ابحث عن الهاتف المناسب بلغة طبيعية</h1>
+                <p class="text-muted mb-0">
+                    اكتب ما تحتاجه بالعربية أو بالإنجليزية، وسنحوّل طلبك إلى فلاتر ذكية ثم نعرض أقرب الأجهزة المناسبة.
+                </p>
+            </div>
+
+            <form id="ai-search-form" class="ai-results-form" action="{{ route('search') }}" method="GET">
+                <label for="ai-query" class="form-label fw-semibold">صف الهاتف الذي تبحث عنه</label>
+                <div class="ai-results-form__controls">
+                    <input
+                        id="ai-query"
+                        type="search"
+                        name="q"
+                        class="form-control form-control-lg"
+                        dir="auto"
+                        value="{{ $query }}"
+                        placeholder="مثال: بدي موبايل قوي للألعاب بسعر لا يتجاوز 450$"
+                        required
+                    >
+                    <button type="submit" class="btn btn-primary btn-lg px-4">
+                        <span class="ai-submit-label">حلّل الطلب</span>
+                        <span class="spinner-border spinner-border-sm d-none ai-submit-spinner" role="status" aria-hidden="true"></span>
+                    </button>
+                </div>
+                <div class="ai-results-form__examples">
+                    <button type="button" class="btn btn-outline-secondary btn-sm rounded-pill ai-example-chip" data-query="بدي موبايل قوي للألعاب بسعر لا يتجاوز 450$">ألعاب تحت 450$</button>
+                    <button type="button" class="btn btn-outline-secondary btn-sm rounded-pill ai-example-chip" data-query="I need a used iPhone with strong camera">Used iPhone camera</button>
+                    <button type="button" class="btn btn-outline-secondary btn-sm rounded-pill ai-example-chip" data-query="هاتف بطارية قوية للاستخدام اليومي">بطارية قوية</button>
+                </div>
+            </form>
+        </div>
     </div>
 
-    @if($products->isEmpty() && $requests->isEmpty())
-        <div class="text-center py-5">
-            <div class="mb-3">
-                <i class="bi bi-search text-muted" style="font-size: 4rem;"></i>
-            </div>
-            <h4>عذراً، لم نعثر على نتائج</h4>
-            <p class="text-muted">حاول استخدام كلمات البحث المختلفة أو تصفح الأقسام.</p>
-            <a href="{{ route('products.index') }}" class="btn btn-primary rounded-pill px-4 mt-2">تصفح جميع المنتجات</a>
-        </div>
-    @else
-        <!-- Products Results -->
-        @if($products->isNotEmpty())
-            <h4 class="fw-bold mb-3 mt-4"><i class="bi bi-phone me-2"></i>المنتجات المعروضة</h4>
-            <div class="row row-cols-1 row-cols-md-2 row-cols-lg-4 g-4 mb-5">
-                @foreach($products as $product)
-                    <div class="col">
-                        <div class="card h-100 border-0 shadow-sm rounded-4 product-card">
-                            <div class="position-relative">
-                                @if($product->images->count() > 0)
-                                    <img src="{{ asset('storage/' . $product->images->first()->image_path) }}" class="card-img-top rounded-top-4" alt="{{ $product->brand }}" style="height: 200px; object-fit: cover;">
-                                @else
-                                    <div class="bg-light d-flex align-items-center justify-content-center rounded-top-4" style="height: 200px;">
-                                        <i class="bi bi-phone fs-1 text-muted"></i>
-                                    </div>
-                                @endif
-                                <span class="badge bg-{{ $product->condition == 'new' ? 'success' : 'warning' }} position-absolute top-0 end-0 m-3">{{ $product->condition == 'new' ? 'جديد' : 'مستعمل' }}</span>
-                            </div>
-                            <div class="card-body">
-                                <h5 class="card-title fw-bold text-truncate">{{ $product->brand }} {{ $product->model }}</h5>
-                                <p class="card-text text-primary fw-bold mb-1">${{ number_format($product->price, 2) }}</p>
-                                <div class="d-flex justify-content-between align-items-center small text-muted">
-                                    <span><i class="bi bi-geo-alt me-1"></i>{{ $product->seller->city ?? 'سوريا' }}</span>
-                                    <span>{{ $product->created_at->diffForHumans() }}</span>
-                                </div>
-                            </div>
-                            <div class="card-footer bg-white border-0 pt-0 pb-3">
-                                <a href="{{ route('product.show', $product) }}" class="btn btn-outline-primary w-100 rounded-pill">التفاصيل</a>
-                            </div>
-                        </div>
-                    </div>
-                @endforeach
-            </div>
-        @endif
+    <div class="row g-4">
+        <div class="col-lg-4">
+            <div class="ai-side-panel">
+                <div class="ai-side-panel__section">
+                    <h5 class="fw-bold mb-3">كيف فهم الذكاء طلبك</h5>
+                    <div id="ai-query-summary" class="ai-query-summary">جاري تحليل طلبك الحالي...</div>
+                </div>
 
-        <!-- Device Requests Results -->
-        @if($requests->isNotEmpty())
-            <h4 class="fw-bold mb-3 mt-4"><i class="bi bi-megaphone me-2"></i>طلبات الأجهزة</h4>
-            <div class="row row-cols-1 row-cols-md-2 row-cols-lg-3 g-4">
-                @foreach($requests as $request)
-                    <div class="col">
-                        <div class="card h-100 border-0 shadow-sm rounded-4">
-                            <div class="card-body">
-                                <div class="d-flex align-items-center mb-3">
-                                    <div class="rounded-circle bg-secondary bg-opacity-10 text-secondary p-3 me-3">
-                                        <i class="bi bi-person fs-4"></i>
-                                    </div>
-                                    <div>
-                                        <h6 class="fw-bold mb-0">{{ $request->user->name }}</h6>
-                                        <small class="text-muted">يطلب جهاز</small>
-                                    </div>
-                                </div>
-                                <h5 class="fw-bold text-primary mb-2">{{ $request->brand }} {{ $request->model }}</h5>
-                                <p class="text-muted small mb-3">{{ Str::limit($request->notes, 80) }}</p>
-                                
-                                @auth
-                                    @if(auth()->id() !== $request->user_id)
-                                        <form action="{{ route('device-requests.offer', $request) }}" method="POST">
-                                            @csrf
-                                            <button type="submit" class="btn btn-sm btn-outline-success w-100 rounded-pill">
-                                                <i class="bi bi-check2-circle me-1"></i> لدي هذا الجهاز
-                                            </button>
-                                        </form>
-                                    @endif
-                                @else
-                                    <a href="{{ route('login') }}" class="btn btn-sm btn-light w-100 rounded-pill">سجل دخولك للرد</a>
-                                @endauth
-                            </div>
-                        </div>
+                <div class="ai-side-panel__section">
+                    <div class="d-flex justify-content-between align-items-center mb-3">
+                        <h6 class="fw-bold mb-0">الفلاتر المستخرجة</h6>
+                        <span id="ai-match-strategy" class="badge text-bg-light">قيد التحليل</span>
                     </div>
-                @endforeach
-            </div>
-        @endif
-    @endif
-</div>
-@endsection
-
-@section('scripts')
-<script>
-document.addEventListener('DOMContentLoaded', function() {
-    document.querySelectorAll('form[action*="/offer"]').forEach(form => {
-        form.addEventListener('submit', function(e) {
-            e.preventDefault();
-            const btn = this.querySelector('button');
-            const originalContent = btn.innerHTML;
-            
-            // Loading State
-            btn.disabled = true;
-            btn.innerHTML = '<span class="spinner-border spinner-border-sm" role="status" aria-hidden="true"></span> جاري الإرسال...';
-            
-            fetch(this.action, {
-                method: 'POST',
-                headers: {
-                    'Content-Type': 'application/json',
-                    'X-CSRF-TOKEN': document.querySelector('input[name="_token"]').value,
-                    'Accept': 'application/json'
-                },
-                body: JSON.stringify({})
-            })
-            .then(response => response.json())
-            .then(data => {
-                if (data.success) {
-                    btn.classList.remove('btn-outline-success');
-                    btn.classList.add('btn-success');
-                    btn.innerHTML = '<i class="bi bi-check-circle-fill me-1"></i> تم الإرسال بنجاح';
-                    
-                    // Show Toast Notification
-                    showToast(data.message);
-                } else {
-                    btn.innerHTML = originalContent;
-                    alert(data.message || 'حدث خطأ ما');
-                }
-            })
-            .catch(error => {
-                console.error('Error:', error);
-                btn.disabled = false;
-                btn.innerHTML = originalContent;
-                alert('حدث خطأ في الاتصال، يرجى المحاولة لاحقاً.');
-            });
-        });
-    });
-});
-
-function showToast(message) {
-    const toastHtml = `
-        <div class="position-fixed bottom-0 start-0 p-3" style="z-index: 1100">
-            <div id="liveToast" class="toast align-items-center text-white bg-success border-0 show" role="alert" aria-live="assertive" aria-atomic="true">
-                <div class="d-flex">
-                    <div class="toast-body">
-                        <i class="bi bi-check-circle me-2"></i> ${message}
-                    </div>
-                    <button type="button" class="btn-close btn-close-white me-2 m-auto" data-bs-dismiss="toast" aria-label="Close"></button>
+                    <div id="ai-filters" class="d-flex flex-wrap gap-2"></div>
+                    <p id="ai-fallback-note" class="small text-muted mt-3 mb-0 d-none"></p>
                 </div>
             </div>
         </div>
-    `;
-    document.body.insertAdjacentHTML('beforeend', toastHtml);
-    setTimeout(() => {
-        const toastEl = document.getElementById('liveToast');
-        if (toastEl) toastEl.remove();
-    }, 3000);
-}
-</script>
+
+        <div class="col-lg-8">
+            <div class="ai-results-card">
+                <div class="d-flex justify-content-between align-items-center flex-wrap gap-2 mb-3">
+                    <div>
+                        <h4 class="fw-bold mb-1">نتائج البحث الذكي</h4>
+                        <p id="ai-results-subtitle" class="text-muted mb-0">جاري الاتصال بمستشار الذكاء الاصطناعي...</p>
+                    </div>
+                    <a href="{{ route('products.index') }}" class="btn btn-outline-primary rounded-pill">تصفح كل المنتجات</a>
+                </div>
+
+                <div id="ai-loading-state" class="ai-state ai-state--loading">
+                    <div class="spinner-grow text-primary mb-3" role="status" aria-hidden="true"></div>
+                    <h5 class="fw-bold">جاري تحليل الطلب</h5>
+                    <p class="text-muted mb-0">نحوّل طلبك إلى فلاتر ذكية ثم نبحث في المنتجات المناسبة.</p>
+                </div>
+
+                <div id="ai-error-state" class="ai-state d-none"></div>
+                <div id="ai-empty-state" class="ai-state d-none"></div>
+                <div id="ai-results-grid" class="row g-4 d-none"></div>
+            </div>
+        </div>
+    </div>
+</div>
 @endsection
+
+@push('scripts')
+<script>
+document.addEventListener('DOMContentLoaded', () => {
+    const page = document.querySelector('.ai-results-page');
+
+    if (!page) {
+        return;
+    }
+
+    const form = document.getElementById('ai-search-form');
+    const queryInput = document.getElementById('ai-query');
+    const submitLabel = form.querySelector('.ai-submit-label');
+    const submitSpinner = form.querySelector('.ai-submit-spinner');
+    const summaryEl = document.getElementById('ai-query-summary');
+    const filtersEl = document.getElementById('ai-filters');
+    const fallbackNoteEl = document.getElementById('ai-fallback-note');
+    const matchStrategyEl = document.getElementById('ai-match-strategy');
+    const subtitleEl = document.getElementById('ai-results-subtitle');
+    const loadingEl = document.getElementById('ai-loading-state');
+    const errorEl = document.getElementById('ai-error-state');
+    const emptyEl = document.getElementById('ai-empty-state');
+    const gridEl = document.getElementById('ai-results-grid');
+
+    const endpoint = page.dataset.aiEndpoint;
+    const searchUrl = page.dataset.searchUrl;
+    const productBaseUrl = page.dataset.productBaseUrl;
+    const initialQuery = queryInput.value.trim();
+
+    const filterLabels = {
+        price_max: 'السعر الأقصى',
+        price_min: 'السعر الأدنى',
+        condition: 'الحالة',
+        brand: 'العلامة',
+        performance: 'الأداء',
+        use_case: 'الاستخدام',
+    };
+
+    const enumLabels = {
+        new: 'جديد',
+        used: 'مستعمل',
+        low: 'منخفض',
+        medium: 'متوسط',
+        high: 'عالٍ',
+        gaming: 'ألعاب',
+        camera: 'كاميرا',
+        battery: 'بطارية',
+        general: 'عام',
+        strict: 'مطابقة كاملة',
+        without_preferences: 'تخفيف تفضيلات',
+        relaxed_budget: 'ميزانية مرنة',
+        flexible_condition: 'حالة مرنة',
+        brand_or_budget: 'علامة أو ميزانية',
+        strict_no_results: 'لا نتائج',
+        brand_or_budget_no_results: 'لا نتائج',
+        flexible_condition_no_results: 'لا نتائج',
+        relaxed_budget_no_results: 'لا نتائج',
+        without_preferences_no_results: 'لا نتائج',
+    };
+
+    function escapeHtml(value) {
+        return String(value ?? '')
+            .replace(/&/g, '&amp;')
+            .replace(/</g, '&lt;')
+            .replace(/>/g, '&gt;')
+            .replace(/"/g, '&quot;')
+            .replace(/'/g, '&#039;');
+    }
+
+    function formatFilterValue(key, value) {
+        if (key === 'price_max' || key === 'price_min') {
+            return `$${Number(value).toLocaleString()}`;
+        }
+
+        return enumLabels[value] ?? value;
+    }
+
+    function setSubmitting(isSubmitting) {
+        queryInput.disabled = isSubmitting;
+        form.querySelector('button[type="submit"]').disabled = isSubmitting;
+        submitSpinner.classList.toggle('d-none', !isSubmitting);
+        submitLabel.textContent = isSubmitting ? 'جاري التحليل' : 'حلّل الطلب';
+    }
+
+    function resetStates() {
+        loadingEl.classList.remove('d-none');
+        errorEl.classList.add('d-none');
+        emptyEl.classList.add('d-none');
+        gridEl.classList.add('d-none');
+        gridEl.innerHTML = '';
+    }
+
+    function renderFilters(filters, searchMeta) {
+        summaryEl.textContent = queryInput.value.trim();
+        filtersEl.innerHTML = '';
+        fallbackNoteEl.classList.add('d-none');
+        fallbackNoteEl.textContent = '';
+
+        const entries = Object.entries(filters || {});
+
+        if (entries.length === 0) {
+            filtersEl.innerHTML = '<span class="text-muted small">لم يتم استخراج فلاتر محددة، لذلك سيعتمد البحث على التوصية العامة.</span>';
+        } else {
+            entries.forEach(([key, value]) => {
+                const chip = document.createElement('span');
+                chip.className = 'ai-filter-chip';
+                chip.innerHTML = `<strong>${escapeHtml(filterLabels[key] ?? key)}:</strong> ${escapeHtml(formatFilterValue(key, value))}`;
+                filtersEl.appendChild(chip);
+            });
+        }
+
+        const strategy = searchMeta?.match_strategy ?? 'strict';
+        matchStrategyEl.textContent = enumLabels[strategy] ?? strategy;
+
+        if (searchMeta?.fallback_applied) {
+            const relaxed = Array.isArray(searchMeta.relaxed_filters) && searchMeta.relaxed_filters.length > 0
+                ? `تم توسيع البحث عبر تخفيف: ${searchMeta.relaxed_filters.map((item) => filterLabels[item] ?? item).join('، ')}.`
+                : 'تم توسيع البحث للحصول على نتائج أقرب لطلبك.';
+
+            fallbackNoteEl.textContent = relaxed;
+            fallbackNoteEl.classList.remove('d-none');
+        }
+    }
+
+    function renderProducts(products, searchMeta) {
+        gridEl.innerHTML = products.map((product) => {
+            const imageUrl = product.primary_image_url;
+            const productTitle = `${product.brand ?? ''} ${product.model ?? ''}`.trim();
+            const sellerLocation = product.seller?.location || product.location || 'غير محدد';
+            const categoryName = product.category?.name || 'هواتف';
+
+            return `
+                <div class="col-md-6">
+                    <div class="card h-100 border-0 shadow-sm rounded-4 ai-product-card">
+                        <div class="ai-product-card__media">
+                            <img src="${escapeHtml(imageUrl)}" alt="${escapeHtml(productTitle)}">
+                            <span class="badge ${product.condition === 'new' ? 'text-bg-success' : 'text-bg-warning'} ai-product-card__badge">
+                                ${escapeHtml(enumLabels[product.condition] ?? product.condition ?? 'منتج')}
+                            </span>
+                        </div>
+                        <div class="card-body d-flex flex-column">
+                            <div class="d-flex justify-content-between align-items-start gap-2 mb-2">
+                                <div>
+                                    <h5 class="fw-bold mb-1">${escapeHtml(productTitle)}</h5>
+                                    <p class="text-muted small mb-0">${escapeHtml(categoryName)}</p>
+                                </div>
+                                <span class="ai-product-card__price">$${Number(product.price ?? 0).toLocaleString()}</span>
+                            </div>
+                            <p class="text-muted small mb-3">${escapeHtml(product.description || 'لا يوجد وصف إضافي لهذا الجهاز حالياً.')}</p>
+                            <div class="ai-product-card__meta">
+                                <span><i class="bi bi-geo-alt"></i>${escapeHtml(sellerLocation)}</span>
+                                <span><i class="bi bi-person"></i>${escapeHtml(product.seller?.name || 'البائع')}</span>
+                            </div>
+                            <div class="mt-auto pt-3 d-flex justify-content-between align-items-center gap-2">
+                                <span class="badge text-bg-light">${escapeHtml(product.source === 'inventory' ? 'من المتجر' : 'إعلان مستخدم')}</span>
+                                <a href="${escapeHtml(`${productBaseUrl}/${product.id}`)}" class="btn btn-outline-primary rounded-pill px-3">عرض التفاصيل</a>
+                            </div>
+                        </div>
+                    </div>
+                </div>
+            `;
+        }).join('');
+
+        gridEl.classList.remove('d-none');
+        subtitleEl.textContent = `تم العثور على ${searchMeta?.result_count ?? products.length} نتيجة مناسبة لطلبك.`;
+    }
+
+    function renderEmpty(searchMeta) {
+        emptyEl.innerHTML = `
+            <i class="bi bi-emoji-neutral ai-state__icon"></i>
+            <h5 class="fw-bold">لم نجد نتائج مناسبة بعد</h5>
+            <p class="text-muted mb-3">
+                جرّب صياغة أبسط أو وسّع الميزانية أو اذكر العلامة التجارية بشكل أقل تحديداً.
+            </p>
+            ${searchMeta?.fallback_applied ? '<p class="small text-muted mb-0">قمنا بالفعل بمحاولة توسيع البحث تلقائياً قبل عرض هذه الحالة.</p>' : ''}
+        `;
+        emptyEl.classList.remove('d-none');
+        subtitleEl.textContent = 'لم يتم العثور على منتجات مطابقة حالياً.';
+    }
+
+    function renderError(message, code) {
+        const isOutOfScope = code === 'AI_OUT_OF_SCOPE';
+
+        errorEl.innerHTML = `
+            <i class="bi ${isOutOfScope ? 'bi-chat-square-text' : 'bi-exclamation-octagon'} ai-state__icon"></i>
+            <h5 class="fw-bold">${isOutOfScope ? 'هذا الطلب خارج نطاق مستشار الهواتف' : 'تعذر إكمال البحث الذكي'}</h5>
+            <p class="text-muted mb-3">${escapeHtml(message)}</p>
+            <div class="d-flex justify-content-center gap-2 flex-wrap">
+                <button type="button" class="btn btn-primary rounded-pill ai-retry-button">جرّب مرة أخرى</button>
+                <a href="{{ route('products.index') }}" class="btn btn-outline-primary rounded-pill">تصفح المنتجات يدوياً</a>
+            </div>
+        `;
+
+        errorEl.querySelector('.ai-retry-button').addEventListener('click', () => runSearch(queryInput.value.trim()));
+        errorEl.classList.remove('d-none');
+        subtitleEl.textContent = isOutOfScope
+            ? 'المستشار الذكي مخصص فقط لطلبات شراء الهواتف.'
+            : 'حدثت مشكلة أثناء التواصل مع خدمة الذكاء الاصطناعي.';
+    }
+
+    async function runSearch(query) {
+        if (!query) {
+            return;
+        }
+
+        resetStates();
+        setSubmitting(true);
+        summaryEl.textContent = query;
+        filtersEl.innerHTML = '';
+        matchStrategyEl.textContent = 'قيد التحليل';
+        subtitleEl.textContent = 'جاري تحليل طلبك وإيجاد أفضل المطابقات...';
+
+        try {
+            const response = await fetch(endpoint, {
+                method: 'POST',
+                headers: {
+                    'Accept': 'application/json',
+                    'Content-Type': 'application/json',
+                },
+                body: JSON.stringify({ query }),
+            });
+
+            const payload = await response.json();
+
+            if (!response.ok) {
+                throw {
+                    message: payload.message || 'حدث خطأ غير متوقع أثناء البحث الذكي.',
+                    code: payload.code || 'AI_SEARCH_ERROR',
+                };
+            }
+
+            const data = payload.data || {};
+            const filters = data.filters || {};
+            const products = data.products || [];
+            const searchMeta = data.search_meta || null;
+
+            renderFilters(filters, searchMeta);
+            loadingEl.classList.add('d-none');
+
+            if (products.length === 0) {
+                renderEmpty(searchMeta);
+            } else {
+                renderProducts(products, searchMeta);
+            }
+        } catch (error) {
+            loadingEl.classList.add('d-none');
+            renderError(error.message || 'حدث خطأ غير متوقع أثناء البحث الذكي.', error.code || 'AI_SEARCH_ERROR');
+        } finally {
+            setSubmitting(false);
+        }
+    }
+
+    form.addEventListener('submit', (event) => {
+        event.preventDefault();
+        const query = queryInput.value.trim();
+
+        if (!query) {
+            queryInput.focus();
+            return;
+        }
+
+        const url = new URL(searchUrl, window.location.origin);
+        url.searchParams.set('q', query);
+        window.history.replaceState({}, '', url);
+        runSearch(query);
+    });
+
+    document.querySelectorAll('.ai-example-chip').forEach((button) => {
+        button.addEventListener('click', () => {
+            queryInput.value = button.dataset.query || '';
+            form.requestSubmit();
+        });
+    });
+
+    if (initialQuery) {
+        runSearch(initialQuery);
+    }
+});
+</script>
+@endpush

@@ -19,10 +19,21 @@
                     <a class="nav-link {{ request()->routeIs('categories.*') ? 'active' : '' }}" href="{{ route('categories.index') }}">التصنيفات</a>
                 </li>
                 <li class="nav-item d-lg-block d-none mx-2">
-                    <form class="position-relative" action="{{ route('search') }}" method="GET">
-                        <input class="form-control nav-search-input py-1" type="search" name="q" placeholder="ابحث..." value="{{ request('q') }}" style="width: 180px; text-align: right; font-size: 0.9rem;">
-                        <button type="submit" class="btn position-absolute top-50 start-0 translate-middle-y p-0 ms-2 text-muted border-0 bg-transparent">
-                            <i class="bi bi-search"></i>
+                    <form class="nav-ai-search" action="{{ route('search') }}" method="GET">
+                        <div class="nav-ai-search__icon">
+                            <i class="bi bi-stars"></i>
+                        </div>
+                        <input
+                            class="form-control nav-search-input py-2"
+                            type="search"
+                            name="q"
+                            placeholder="ابحث بالذكاء الاصطناعي: موبايل ألعاب تحت 450$"
+                            value="{{ request('q') }}"
+                            aria-label="AI phone search"
+                        >
+                        <button type="submit" class="btn nav-ai-search__button">
+                            <span class="d-none d-xl-inline">بحث ذكي</span>
+                            <i class="bi bi-arrow-left-short fs-5"></i>
                         </button>
                     </form>
                 </li>
@@ -107,6 +118,25 @@
         </div>
     </div>
 </nav>
+
+<div class="container d-lg-none mt-3">
+    <form class="nav-ai-search nav-ai-search--mobile" action="{{ route('search') }}" method="GET">
+        <div class="nav-ai-search__icon">
+            <i class="bi bi-stars"></i>
+        </div>
+        <input
+            class="form-control nav-search-input py-2"
+            type="search"
+            name="q"
+            placeholder="ابحث بالذكاء الاصطناعي عن الهاتف المناسب"
+            value="{{ request('q') }}"
+            aria-label="AI phone search"
+        >
+        <button type="submit" class="btn nav-ai-search__button">
+            <i class="bi bi-search"></i>
+        </button>
+    </form>
+</div>
 
 <script>
     document.addEventListener('DOMContentLoaded', function() {
