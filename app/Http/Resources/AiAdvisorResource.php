@@ -14,6 +14,10 @@ class AiAdvisorResource extends JsonResource
             'products' => ProductResource::collection($this->resource['products'])->resolve($request),
         ];
 
+        if (array_key_exists('fallback', $this->resource)) {
+            $payload['fallback'] = (bool) $this->resource['fallback'];
+        }
+
         if (isset($this->resource['search_meta'])) {
             $payload['search_meta'] = $this->resource['search_meta'];
         }

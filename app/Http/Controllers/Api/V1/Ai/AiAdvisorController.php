@@ -22,7 +22,7 @@ class AiAdvisorController extends ApiController
 
             return $this->resourceResponse(
                 new AiAdvisorResource($result),
-                'AI recommendations generated successfully.'
+                $result['message'] ?? 'AI recommendations generated successfully.'
             );
         } catch (AiAdvisorException $exception) {
             return $this->errorResponse(

@@ -7,6 +7,7 @@ use App\Models\Product;
 use Illuminate\Database\Eloquent\Builder;
 use Illuminate\Database\Eloquent\Collection;
 use Illuminate\Http\Client\ConnectionException;
+use Illuminate\Http\Client\Response;
 use Illuminate\Support\Arr;
 use Illuminate\Support\Facades\Http;
 use Illuminate\Support\Facades\Validator;
@@ -15,6 +16,8 @@ class AiAdvisorService
 {
     private const OUT_OF_SCOPE_ERROR = 'OUT_OF_SCOPE';
     private const DEFAULT_LIMIT = 20;
+    private const PROVIDER_RETRIES = 3;
+    private const RETRY_DELAY_MICROSECONDS = 400000;
 
     private const ALLOWED_FILTER_KEYS = [
         'price_max',
@@ -27,14 +30,24 @@ class AiAdvisorService
 
     public function advise(string $query): array
     {
-        $filters = $this->generateFilters($query);
-        $searchResult = $this->findProductsWithFallback($filters);
+        try {
+            $filters = $this->generateFilters($query);
+            $searchResult = $this->findProductsWithFallback($filters);
 
-        return [
-            'filters' => $filters,
-            'products' => $searchResult['products'],
-            'search_meta' => $searchResult['search_meta'],
-        ];
+            return [
+                'filters' => $filters,
+                'products' => $searchResult['products'],
+                'search_meta' => $searchResult['search_meta'],
+                'fallback' => false,
+                'message' => 'AI recommendations generated successfully.',
+            ];
+        } catch (AiAdvisorException $exception) {
+            if ($exception->errorCode() === 'AI_OUT_OF_SCOPE') {
+                throw $exception;
+            }
+
+            return $this->buildProviderFallbackResult($query, $exception);
+        }
     }
 
     public function generateFilters(string $query): array
@@ -50,30 +63,7 @@ class AiAdvisorService
             );
         }
 
-        try {
-            $response = Http::timeout(20)
-                ->withHeaders([
-                    'Content-Type' => 'application/json',
-                    'X-goog-api-key' => $apiKey,
-                ])
-                ->post($endpoint, [
-                    'contents' => [
-                        [
-                            'parts' => [
-                                [
-                                    'text' => $this->buildPrompt($query),
-                                ],
-                            ],
-                        ],
-                    ],
-                ]);
-        } catch (ConnectionException $exception) {
-            throw new AiAdvisorException(
-                'Unable to reach the AI provider.',
-                'AI_PROVIDER_UNAVAILABLE',
-                503,
-            );
-        }
+        $response = $this->requestProviderWithRetry($endpoint, $apiKey, $query);
 
         if ($response->failed()) {
             throw new AiAdvisorException(
@@ -99,6 +89,62 @@ class AiAdvisorService
         $this->applyOrdering($query, $filters);
 
         return $query->limit($limit)->get();
+    }
+
+    public function fallbackSearch(string $query, int $limit = self::DEFAULT_LIMIT): array
+    {
+        $priceHint = $this->extractPriceHint($query);
+        $keywords = $this->extractSearchKeywords($query);
+
+        $builder = Product::query()
+            ->with(['seller', 'category', 'images', 'variants'])
+            ->where('status', 'available');
+
+        if ($priceHint !== null) {
+            $builder->where('price', '<=', $priceHint);
+        }
+
+        if ($keywords !== []) {
+            $builder->where(function (Builder $queryBuilder) use ($keywords) {
+                foreach ($keywords as $keyword) {
+                    $queryBuilder
+                        ->orWhere('name', 'like', '%'.$keyword.'%')
+                        ->orWhere('brand', 'like', '%'.$keyword.'%')
+                        ->orWhere('model', 'like', '%'.$keyword.'%')
+                        ->orWhere('description', 'like', '%'.$keyword.'%')
+                        ->orWhere('condition_notes', 'like', '%'.$keyword.'%')
+                        ->orWhere('accessories', 'like', '%'.$keyword.'%');
+                }
+            });
+        }
+
+        $this->applyFallbackOrdering($builder, $query, $keywords);
+
+        $products = $builder->limit($limit)->get();
+
+        if ($products->isEmpty()) {
+            $products = Product::query()
+                ->with(['seller', 'category', 'images', 'variants'])
+                ->where('status', 'available')
+                ->latest()
+                ->limit($limit)
+                ->get();
+        }
+
+        return [
+            'products' => $products,
+            'search_meta' => [
+                'fallback_applied' => true,
+                'match_strategy' => 'provider_fallback',
+                'result_count' => $products->count(),
+                'applied_filters' => [
+                    'price_max' => $priceHint,
+                ],
+                'relaxed_filters' => [],
+                'raw_query' => $query,
+                'matched_keywords' => $keywords,
+            ],
+        ];
     }
 
     public function findProductsWithFallback(array $filters, int $limit = self::DEFAULT_LIMIT): array
@@ -492,5 +538,140 @@ PROMPT;
         }
 
         return array_values(array_unique($relaxed));
+    }
+
+    private function requestProviderWithRetry(string $endpoint, string $apiKey, string $query): Response
+    {
+        $response = null;
+
+        for ($attempt = 1; $attempt <= self::PROVIDER_RETRIES; $attempt++) {
+            try {
+                $response = Http::timeout(20)
+                    ->withHeaders([
+                        'Content-Type' => 'application/json',
+                        'X-goog-api-key' => $apiKey,
+                    ])
+                    ->post($endpoint, [
+                        'contents' => [
+                            [
+                                'parts' => [
+                                    [
+                                        'text' => $this->buildPrompt($query),
+                                    ],
+                                ],
+                            ],
+                        ],
+                    ]);
+
+                if (! $this->shouldRetryResponse($response) || $attempt === self::PROVIDER_RETRIES) {
+                    return $response;
+                }
+            } catch (ConnectionException $exception) {
+                if ($attempt === self::PROVIDER_RETRIES) {
+                    throw new AiAdvisorException(
+                        'Unable to reach the AI provider.',
+                        'AI_PROVIDER_UNAVAILABLE',
+                        503,
+                    );
+                }
+            }
+
+            usleep(self::RETRY_DELAY_MICROSECONDS);
+        }
+
+        return $response;
+    }
+
+    private function shouldRetryResponse(Response $response): bool
+    {
+        return $response->serverError()
+            || in_array($response->status(), [408, 429], true);
+    }
+
+    private function buildProviderFallbackResult(string $query, AiAdvisorException $exception): array
+    {
+        $fallback = $this->fallbackSearch($query);
+
+        return [
+            'filters' => null,
+            'products' => $fallback['products'],
+            'search_meta' => array_merge($fallback['search_meta'], [
+                'provider_failure_code' => $exception->errorCode(),
+            ]),
+            'fallback' => true,
+            'message' => 'Fallback search used due to AI unavailability.',
+        ];
+    }
+
+    private function extractPriceHint(string $query): ?float
+    {
+        preg_match_all('/\d+(?:\.\d+)?/', $query, $matches);
+
+        if (($matches[0] ?? []) === []) {
+            return null;
+        }
+
+        $numbers = array_map('floatval', $matches[0]);
+        $price = max($numbers);
+
+        if ($price <= 0) {
+            return null;
+        }
+
+        return round($price * 1.1, 2);
+    }
+
+    private function extractSearchKeywords(string $query): array
+    {
+        $tokens = preg_split('/[^\p{L}\p{N}]+/u', mb_strtolower($query), -1, PREG_SPLIT_NO_EMPTY) ?: [];
+        $stopWords = [
+            'a', 'an', 'and', 'for', 'the', 'with', 'under', 'over', 'phone', 'mobile',
+            'ابي', 'ابغى', 'اريد', 'بدي', 'جوال', 'موبايل', 'هاتف', 'تحت', 'فوق', 'حوالي',
+            'بسعر', 'سعر', 'قوي', 'لل', 'من', 'في', 'على',
+        ];
+
+        $keywords = array_values(array_filter($tokens, static function ($token) use ($stopWords) {
+            if (mb_strlen($token) < 2) {
+                return false;
+            }
+
+            return ! in_array($token, $stopWords, true);
+        }));
+
+        return array_values(array_unique($keywords));
+    }
+
+    private function applyFallbackOrdering(Builder $query, string $rawQuery, array $keywords): void
+    {
+        $rawQuery = trim(mb_strtolower($rawQuery));
+
+        if ($rawQuery !== '') {
+            $query->orderByRaw(
+                'CASE
+                    WHEN LOWER(name) LIKE ? THEN 0
+                    WHEN LOWER(description) LIKE ? THEN 1
+                    ELSE 2
+                END',
+                ['%'.$rawQuery.'%', '%'.$rawQuery.'%']
+            );
+        }
+
+        if ($keywords !== []) {
+            $query->orderByRaw(
+                'CASE
+                    WHEN LOWER(name) LIKE ? THEN 0
+                    WHEN LOWER(model) LIKE ? THEN 1
+                    WHEN LOWER(description) LIKE ? THEN 2
+                    ELSE 3
+                END',
+                [
+                    '%'.$keywords[0].'%',
+                    '%'.$keywords[0].'%',
+                    '%'.$keywords[0].'%',
+                ]
+            );
+        }
+
+        $query->latest();
     }
 }
