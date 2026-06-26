@@ -6,17 +6,20 @@ It serves as the definitive implementation contract for mobile (Flutter) develop
 ## Global Concepts
 
 ### Pagination Metadata
-When paginated, endpoints return a `meta` block:
+Most paginated collection endpoints return a top-level `meta` block:
 ```json
 "meta": {
   "current_page": 1,
   "last_page": 3,
   "per_page": 15,
   "total": 45,
+  "from": 1,
+  "to": 15,
   "has_more_pages": true
 }
 ```
 * **Tip for Flutter:** Always use `has_more_pages` to trigger infinite scrolling and append `?page=X` to load the next chunk.
+* **Note:** `GET /api/v1/search` is a special case. It returns nested `meta` blocks inside `data.products` and `data.device_requests`, and those nested blocks only include `current_page`, `last_page`, `total`, and `has_more_pages`.
 
 ### Standard Error Schema
 ```json
@@ -326,7 +329,7 @@ When paginated, endpoints return a `meta` block:
 ```
 **Explanation:** Loads everything needed for the main landing screen.
 - `categories`: array of category objects.
-- `featured_products`: array of the top 10 available products.
+- `featured_products`: array of the 10 latest public products loaded from the catalog feed. In the current implementation, products with `status = available` and `status = sold` may both appear here.
 - `device_requests`: array of the 10 latest approved user requests.
 
 ---
@@ -378,9 +381,22 @@ When paginated, endpoints return a `meta` block:
 ```
 **Explanation:** Returns two separate paginated collections inside `data` (products and requests).
 
+### Empty Query Example
+```json
+{
+  "data": {
+    "products": [],
+    "device_requests": []
+  },
+  "message": "Empty search query."
+}
+```
+**Explanation:** If `q` is missing or empty, the API returns success with empty arrays instead of validation errors.
+
 ---
 ### 📝 Notes
 * **Mobile Tip:** Use `meta` inside `products` or `device_requests` to handle pagination separately if required.
+* In the non-empty search response, nested `meta` contains only `current_page`, `last_page`, `total`, and `has_more_pages`.
 
 ---
 
@@ -565,6 +581,11 @@ When paginated, endpoints return a `meta` block:
       "brand": "Apple",
       "model": "13",
       "description": "Used device",
+      "defects": null,
+      "condition_notes": "Minor scratches on frame",
+      "accessories": "Box and charger",
+      "disassembled_is": false,
+      "reason_disassembly": null,
       "price": 300.0,
       "condition": "used",
       "status": "available",
@@ -572,8 +593,11 @@ When paginated, endpoints return a `meta` block:
       "color": "Black",
       "location": "Aleppo",
       "primary_image_url": "https://your-domain.com/storage/products/example.jpg",
-      "seller": { "id": 8, "name": "Mohammad", "username": "seller01" },
+      "created_at": "2026-06-20T09:10:00.000000Z",
+      "updated_at": "2026-06-20T09:10:00.000000Z",
+      "seller": { "id": 8, "name": "Mohammad", "username": "seller01", "location": "Aleppo" },
       "category": { "id": 2, "name": "iPhone", "slug": "iphone" },
+      "device": { "id": 6, "brand": "Apple", "model_name": "iPhone 13", "slug": "apple-iphone-13" },
       "images": [ { "id": 90, "url": "https://...", "is_primary": false } ],
       "variants": []
     }
@@ -584,6 +608,8 @@ When paginated, endpoints return a `meta` block:
     "last_page": 5,
     "per_page": 12,
     "total": 60,
+    "from": 1,
+    "to": 12,
     "has_more_pages": true
   }
 }
@@ -750,6 +776,10 @@ for (var file in files) {
 | condition | string | Yes  | `new` or `used` |
 | color | string | Yes      | - |
 | status | string | No | `available`, `sold`, `hidden`, `pending`, `rejected` |
+| description | string | No | Listing details |
+| defects | string | No | Defect summary |
+| accessories | string | No | Included accessories |
+| disassembled_is | boolean | No | Send as `0` or `1` |
 | delete_images[] | integer array | No | IDs of existing images to delete |
 | images[] | file array | No | New images to append |
 
@@ -834,7 +864,7 @@ for (var file in files) {
     }
   ],
   "message": "Device requests retrieved successfully.",
-  "meta": { "current_page": 1, "last_page": 1, "per_page": 15, "total": 1, "has_more_pages": false }
+  "meta": { "current_page": 1, "last_page": 1, "per_page": 15, "total": 1, "from": 1, "to": 1, "has_more_pages": false }
 }
 ```
 **Explanation:** Shows requests published by other users seeking specific devices.
@@ -956,7 +986,7 @@ for (var file in files) {
     }
   ],
   "message": "Orders retrieved successfully.",
-  "meta": { "current_page": 1, "last_page": 1, "per_page": 10, "total": 1, "has_more_pages": false }
+  "meta": { "current_page": 1, "last_page": 1, "per_page": 10, "total": 1, "from": 1, "to": 1, "has_more_pages": false }
 }
 ```
 
@@ -1111,7 +1141,7 @@ for (var file in files) {
   "data": [
     {
       "id": 44,
-      "type": "debit",
+      "type": "withdraw",
       "amount": 300.0,
       "balance_before": 550.0,
       "balance_after": 250.0,
@@ -1121,7 +1151,7 @@ for (var file in files) {
     }
   ],
   "message": "Wallet transactions retrieved successfully.",
-  "meta": { "current_page": 1, "last_page": 1, "per_page": 10, "total": 1, "has_more_pages": false }
+  "meta": { "current_page": 1, "last_page": 1, "per_page": 10, "total": 1, "from": 1, "to": 1, "has_more_pages": false }
 }
 ```
 **Explanation:** Paginated ledger of deposits/debits affecting balance directly.
@@ -1135,7 +1165,29 @@ for (var file in files) {
 **Authentication:** Required
 
 ---
-*(Returns Paginated list of user-submitted pending/approved recharge requests)*
+### Success Response
+```json
+{
+  "data": [
+    {
+      "id": 7,
+      "amount": 150.0,
+      "type": "deposit",
+      "payment_method": "mtn_cash",
+      "status": "pending",
+      "reference_number": null,
+      "notes": null,
+      "admin_notes": null,
+      "proof_image_url": "https://your-domain.com/storage/payment_proofs/example.jpg",
+      "created_at": "2026-06-20T08:30:00.000000Z",
+      "updated_at": "2026-06-20T08:30:00.000000Z"
+    }
+  ],
+  "message": "Recharge requests retrieved successfully.",
+  "meta": { "current_page": 1, "last_page": 1, "per_page": 10, "total": 1, "from": 1, "to": 1, "has_more_pages": false }
+}
+```
+**Explanation:** Returns a paginated list of the current user's deposit requests.
 
 ---
 
@@ -1164,7 +1216,24 @@ for (var file in files) {
 
 ---
 ### 📤 Success Response
-*(Returns the created Recharge Request object)*
+```json
+{
+  "data": {
+    "id": 8,
+    "amount": 200.0,
+    "type": "deposit",
+    "payment_method": "syriatel_cash",
+    "status": "pending",
+    "reference_number": null,
+    "notes": null,
+    "admin_notes": null,
+    "proof_image_url": "https://your-domain.com/storage/payment_proofs/example.jpg",
+    "created_at": "2026-06-20T09:00:00.000000Z",
+    "updated_at": "2026-06-20T09:00:00.000000Z"
+  },
+  "message": "Recharge request created successfully."
+}
+```
 
 ---
 ### 📝 Notes
@@ -1205,7 +1274,7 @@ for (var file in files) {
     }
   ],
   "message": "Notifications retrieved successfully.",
-  "meta": { "current_page": 1, "last_page": 1, "per_page": 20, "total": 1, "has_more_pages": false }
+  "meta": { "current_page": 1, "last_page": 1, "per_page": 20, "total": 1, "from": 1, "to": 1, "has_more_pages": false }
 }
 ```
 **Explanation:** `has_action` indicates if the Flutter app should look inside `meta` for navigation IDs.
@@ -1239,4 +1308,3 @@ for (var file in files) {
   "message": "Notifications marked as read successfully."
 }
 ```
-

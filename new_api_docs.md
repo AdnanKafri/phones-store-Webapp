@@ -246,7 +246,7 @@ Paginated endpoints return a `meta` block:
         "للألعاب",
         "450"
       ],
-      "provider_failure_code": "AI_PROVIDER_UNAVAILABLE"
+      "provider_failure_code": "AI_PROVIDER_ERROR"
     }
   },
   "message": "Fallback search used due to AI unavailability."
@@ -306,6 +306,38 @@ Examples:
 }
 ```
 
+#### AI Invalid Response (`422`)
+```json
+{
+  "message": "AI response did not contain a valid JSON block.",
+  "code": "AI_INVALID_RESPONSE"
+}
+```
+
+#### AI Provider Error (`502`)
+```json
+{
+  "message": "AI provider request failed.",
+  "code": "AI_PROVIDER_ERROR"
+}
+```
+
+#### AI Provider Unavailable (`503`)
+```json
+{
+  "message": "AI provider is temporarily unavailable.",
+  "code": "AI_PROVIDER_UNAVAILABLE"
+}
+```
+
+#### AI Configuration Error (`500`)
+```json
+{
+  "message": "AI service is not configured correctly.",
+  "code": "AI_CONFIGURATION_ERROR"
+}
+```
+
 ---
 ### 📝 Notes
 * `filters` contains normalized AI output when Gemini succeeds.
@@ -313,6 +345,9 @@ Examples:
 * `fallback = true` means the endpoint completed successfully through non-AI fallback logic.
 * `search_meta.fallback_applied = true` may also appear when AI succeeds but product matching had to be widened internally.
 * The backend retries Gemini up to 3 times before switching to fallback.
+* `provider_failure_code` inside `search_meta` is informational only. Current values may include `AI_PROVIDER_ERROR` or `AI_PROVIDER_UNAVAILABLE`.
+* The request field `query` is required and currently validated as a string with minimum length `2` and maximum length `1000`.
+* For Flutter error handling, rely on the `code` field rather than exact localized `message` text.
 * Empty `products: []` is a valid successful response and should not be treated as an API failure.
 
 ---
